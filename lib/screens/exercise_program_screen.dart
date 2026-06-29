@@ -37,7 +37,7 @@ class ExerciseProgramScreen extends StatelessWidget {
                   Tab(text: '🧍 Posture'),
                   Tab(text: '🌬️ Breathing'),
                 ],
-                labelColor: theme.colorScheme.primary,
+                labelColor: Colors.white,
                 unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               ),
             ),

@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/chat_message.dart';
+import '../core/services/chat_service.dart';
 
 class ChatProvider extends ChangeNotifier {
+  final ChatService _chatService;
+
+  String? _currentSessionId;
+  bool _isLoading = false;
+  String? _error;
+
   final List<ChatMessage> _messages = [
     ChatMessage(
       role: MessageRole.bot,
@@ -10,7 +17,11 @@ class ChatProvider extends ChangeNotifier {
     ),
   ];
 
+  ChatProvider(this._chatService);
+
   List<ChatMessage> get messages => List.unmodifiable(_messages);
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   static const List<String> suggestedQuestions = [
     "What causes scoliosis?",
@@ -19,38 +30,88 @@ class ChatProvider extends ChangeNotifier {
     "What is a Cobb angle?",
   ];
 
-  void sendMessage(String text) {
+  Future<void> startSession() async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final session = await _chatService.startSession();
+      _currentSessionId = session.sessionId;
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
+    // Add user message immediately
     _messages.add(ChatMessage(role: MessageRole.user, message: text));
     notifyListeners();
 
-    // Simulate bot response — replace with real API call later
-    Future.delayed(const Duration(seconds: 1), () {
-      String response;
-      final lower = text.toLowerCase();
-      if (lower.contains('exercise') && lower.contains('thoracic')) {
-        response = "For thoracic scoliosis, I recommend focusing on:\n\n"
-            "• Cat-Cow stretches for spinal mobility\n"
-            "• Side planks to strengthen core muscles\n"
-            "• Thoracic extension exercises\n"
-            "• Breathing exercises to improve rib cage flexibility\n\n"
-            "Would you like me to show you how to perform any of these?";
-      } else if (lower.contains('cause')) {
-        response = "Scoliosis can be caused by several factors:\n\n"
-            "• Idiopathic (most common, ~80% of cases)\n"
-            "• Congenital (present at birth)\n"
-            "• Neuromuscular (nerve or muscle conditions)\n"
-            "• Degenerative (age-related)\n\n"
-            "Would you like to learn more about any specific type?";
-      } else {
-        response =
-            "Thank you for your question! I'm processing your request and "
-            "will provide helpful information shortly.";
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      // Start session if not already started
+      if (_currentSessionId == null) {
+        await startSession();
       }
 
-      _messages.add(ChatMessage(role: MessageRole.bot, message: response));
+      // Send message to backend
+      final backendMessage = await _chatService.sendMessage(
+        _currentSessionId!,
+        text,
+      );
+
+      // Add bot response
+      _messages.add(ChatMessage(
+        role: MessageRole.bot,
+        message: backendMessage.content,
+      ));
+
+      _isLoading = false;
       notifyListeners();
-    });
+    } catch (e) {
+      _error = 'Failed to send message: $e';
+      _isLoading = false;
+
+      // Add error message as bot response
+      _messages.add(ChatMessage(
+        role: MessageRole.bot,
+        message:
+            "I'm sorry, I encountered an error processing your message. Please try again.",
+      ));
+      notifyListeners();
+    }
+  }
+
+  Future<void> endSession() async {
+    if (_currentSessionId == null) return;
+
+    try {
+      await _chatService.endSession(_currentSessionId!);
+      _currentSessionId = null;
+    } catch (e) {
+      // Silently fail - session will expire on backend
+    }
+  }
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    endSession(); // End session when provider is disposed
+    super.dispose();
   }
 }
