@@ -44,7 +44,8 @@ class ScolioCareApp extends StatelessWidget {
         ChangeNotifierProvider(
             create: (_) => SettingsProvider()..loadSettings()),
       ],
-      child: Consumer<SettingsProvider>(
+      child: Consumer<SettingsProvider>
+      (
         builder: (context, settings, _) {
           return MaterialApp(
             title: 'ScolioCare',
@@ -69,7 +70,7 @@ class ScolioCareApp extends StatelessWidget {
               '/settings': (_) => const SettingsScreen(),
             },
             onUnknownRoute: (_) =>
-                MaterialPageRoute(builder: (_) => const NotFoundScreen()),
+                MaterialPageRoute(builder: (_) => const NotFoundScreen(),),
           );
         },
       ),

@@ -94,7 +94,11 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
                 if (_step == 0) _imageFile = null;
               });
             } else {
-              Navigator.pop(context);
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                Navigator.pushReplacementNamed(context, '/dashboard');
+              }
             }
           },
         ),
