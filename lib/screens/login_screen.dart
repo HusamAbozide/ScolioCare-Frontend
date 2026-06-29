@@ -47,15 +47,23 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Header
+              // Header with app logo
               Padding(
-                padding: const EdgeInsets.only(top: 48, bottom: 32),
+                padding: const EdgeInsets.only(top: 40, bottom: 24),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.monitor_heart,
-                      size: 80,
-                      color: theme.colorScheme.primary,
+                    SizedBox(
+                      width: 140,
+                      height: 140,
+                      child: Image.asset(
+                        'Gemini_Generated_Image_3a5h2r3a5h2r3a5h.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.monitor_heart,
+                          size: 112,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -167,7 +175,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D2340) : const Color(0xFFF0ECF5),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF2D2340)
+                                    : const Color(0xFFF0ECF5),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(

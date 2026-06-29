@@ -64,16 +64,28 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ),
 
-            // Logo
+            // Logo + app name
             Padding(
-              padding: const EdgeInsets.only(top: 32, bottom: 24),
-              child: Icon(
-                Icons.monitor_heart,
-                size: 120,
-                color: theme.colorScheme.primary,
+              padding: const EdgeInsets.only(top: 20, bottom: 16),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: 180,
+                    height: 180,
+                    child: Image.asset(
+                      'Gemini_Generated_Image_3a5h2r3a5h2r3a5h.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.monitor_heart,
+                        size: 140,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  //const SizedBox(height: 12),
+                ],
               ),
             ),
-
             // Carousel content
             Expanded(
               child: AnimatedSwitcher(
