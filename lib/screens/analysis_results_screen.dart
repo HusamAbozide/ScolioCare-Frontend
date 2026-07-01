@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/chat_fab.dart';
 
 class AnalysisResultsScreen extends StatelessWidget {
   const AnalysisResultsScreen({super.key});
@@ -30,7 +31,9 @@ class AnalysisResultsScreen extends StatelessWidget {
               margin: const EdgeInsets.all(24),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D2340) : const Color(0xFFF0ECF5),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2D2340)
+                    : const Color(0xFFF0ECF5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -211,6 +214,7 @@ class AnalysisResultsScreen extends StatelessWidget {
           ],
         ),
       ),
+      floatingActionButton: const ChatFab(),
     );
   }
 }
@@ -264,7 +268,9 @@ class _RecommendationItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D2340) : const Color(0xFFF0ECF5),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2D2340)
+            : const Color(0xFFF0ECF5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

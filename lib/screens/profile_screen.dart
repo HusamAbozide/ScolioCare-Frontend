@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/chat_fab.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -283,6 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+      floatingActionButton: const ChatFab(),
     );
   }
 

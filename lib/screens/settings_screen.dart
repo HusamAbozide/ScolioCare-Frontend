@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/chat_fab.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -229,6 +230,7 @@ class SettingsScreen extends StatelessWidget {
           );
         },
       ),
+      floatingActionButton: const ChatFab(),
     );
   }
 

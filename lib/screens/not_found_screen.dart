@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/chat_fab.dart';
 
 class NotFoundScreen extends StatelessWidget {
   const NotFoundScreen({super.key});
@@ -62,6 +63,7 @@ class NotFoundScreen extends StatelessWidget {
           ),
         ),
       ),
+      floatingActionButton: const ChatFab(),
     );
   }
 }

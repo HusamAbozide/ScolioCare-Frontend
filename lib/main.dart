@@ -27,8 +27,9 @@ import 'screens/scoliometer_screen.dart';
 import 'screens/chatbot_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/not_found_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/notifications_screen.dart';
+import 'screens/not_found_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -102,6 +103,7 @@ class ScolioCareApp extends StatelessWidget {
               '/chatbot': (_) => const ChatbotScreen(),
               '/reports': (_) => const ReportsScreen(),
               '/settings': (_) => const SettingsScreen(),
+              '/profile': (_) => const ProfileScreen(),
               '/notifications': (_) => const NotificationsScreen(),
             },
             onUnknownRoute: (_) => MaterialPageRoute(

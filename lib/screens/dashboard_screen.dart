@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/mobile_layout.dart';
+import '../widgets/app_drawer.dart';
 import '../theme/app_theme.dart';
 
 class DashboardScreen extends StatefulWidget {

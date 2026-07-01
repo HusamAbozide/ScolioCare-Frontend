@@ -15,6 +15,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    // Start chat session when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chatProvider = context.read<ChatProvider>();
+      if (chatProvider.messages.length <= 1) {
+        // Only start session if it's a fresh chat
+        chatProvider.startSession();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
@@ -71,8 +84,73 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
-                        itemCount: chat.messages.length,
+                        itemCount:
+                            chat.messages.length + (chat.isLoading ? 1 : 0),
                         itemBuilder: (_, i) {
+                          // Show loading indicator at the end
+                          if (i == chat.messages.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.smart_toy,
+                                        size: 16,
+                                        color: theme.colorScheme.primary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF2D2340)
+                                          : const Color(0xFFF0ECF5),
+                                      borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(16),
+                                        topRight: Radius.circular(16),
+                                        bottomLeft: Radius.circular(4),
+                                        bottomRight: Radius.circular(16),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation(
+                                                theme.colorScheme.primary),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Typing...',
+                                          style: TextStyle(
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
                           final msg = chat.messages[i];
                           final isBot = msg.role == MessageRole.bot;
                           return _MessageBubble(

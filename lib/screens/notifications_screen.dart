@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/notification_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/chat_fab.dart';
 import 'package:intl/intl.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -100,6 +101,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     },
                   ),
                 ),
+      floatingActionButton: const ChatFab(),
     );
   }
 }
