@@ -9,10 +9,16 @@ import 'providers/chat_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/report_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/reward_provider.dart';
+import 'providers/legal_provider.dart';
+import 'providers/posture_provider.dart';
 import 'core/api/api_client.dart';
 import 'core/services/chat_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/report_service.dart';
+import 'core/services/reward_service.dart';
+import 'core/services/legal_service.dart';
+import 'core/services/posture_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
@@ -30,6 +36,15 @@ import 'screens/settings_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/not_found_screen.dart';
+import 'screens/rewards_catalog_screen.dart';
+import 'screens/terms_screen.dart';
+import 'screens/privacy_screen.dart';
+import 'screens/medical_disclaimer_screen.dart';
+import 'screens/consent_management_screen.dart';
+import 'screens/posture_tracking_screen.dart';
+import 'screens/change_password_screen.dart';
+import 'screens/otp_verification_screen.dart';
+import 'screens/account_deletion_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,13 +61,18 @@ class ScolioCareApp extends StatelessWidget {
     final chatService = ChatService(apiClient);
     final notificationService = NotificationService(apiClient);
     final reportService = ReportService(apiClient);
+    final rewardService = RewardService(apiClient);
+    final legalService = LegalService(apiClient);
+    final postureService = PostureService(apiClient: apiClient);
 
     return MultiProvider(
       providers: [
-        // Existing providers (they create their own service instances internally)
+        // Auth provider - must be first as others depend on it
         ChangeNotifierProvider(
           create: (_) => AuthProvider()..loadSession(),
         ),
+
+        // Providers that create their own service instances
         ChangeNotifierProvider(
           create: (_) => ProfileProvider(),
         ),
@@ -68,16 +88,38 @@ class ScolioCareApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => SettingsProvider()..loadSettings(),
         ),
+        ChangeNotifierProvider(
+          create: (_) => PostureProvider(postureService: postureService),
+        ),
 
-        // New providers with injected services
+        // Providers with injected services and userId access
+        ChangeNotifierProxyProvider<AuthProvider, NotificationProvider>(
+          create: (context) => NotificationProvider(
+            notificationService,
+            getUserId: () => context.read<AuthProvider>().currentUser?.userId,
+          ),
+          update: (context, auth, previous) =>
+              previous ??
+              NotificationProvider(
+                notificationService,
+                getUserId: () => auth.currentUser?.userId,
+              ),
+        ),
+
         ChangeNotifierProvider(
           create: (_) => ChatProvider(chatService),
         ),
-        ChangeNotifierProvider(
-          create: (_) => NotificationProvider(notificationService),
-        ),
+
         ChangeNotifierProvider(
           create: (_) => ReportProvider(reportService),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) => RewardProvider(rewardService),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) => LegalProvider(legalService),
         ),
       ],
       child: Consumer<SettingsProvider>(
@@ -88,9 +130,9 @@ class ScolioCareApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: settings.themeMode,
-            initialRoute: '/',
+            home: const LoginScreen(),
             routes: {
-              '/': (_) => const WelcomeScreen(),
+              '/welcome': (_) => const WelcomeScreen(),
               '/login': (_) => const LoginScreen(),
               '/profile-setup': (_) => const ProfileSetupScreen(),
               '/dashboard': (_) => const DashboardScreen(),
@@ -105,6 +147,27 @@ class ScolioCareApp extends StatelessWidget {
               '/settings': (_) => const SettingsScreen(),
               '/profile': (_) => const ProfileScreen(),
               '/notifications': (_) => const NotificationsScreen(),
+              '/rewards': (_) => const RewardsCatalogScreen(),
+              '/terms': (_) => const TermsScreen(),
+              '/privacy': (_) => const PrivacyScreen(),
+              '/medical-disclaimer': (_) => const MedicalDisclaimerScreen(),
+              '/consent-management': (_) => const ConsentManagementScreen(),
+              '/posture-tracking': (_) => const PostureTrackingScreen(),
+              '/change-password': (_) => const ChangePasswordScreen(),
+              '/account-deletion': (_) => const AccountDeletionScreen(),
+            },
+            onGenerateRoute: (settings) {
+              // Handle OTP verification route with parameters
+              if (settings.name == '/otp-verification') {
+                final args = settings.arguments as Map<String, dynamic>?;
+                return MaterialPageRoute(
+                  builder: (_) => OtpVerificationScreen(
+                    email: args?['email'] ?? '',
+                    purpose: args?['purpose'],
+                  ),
+                );
+              }
+              return null;
             },
             onUnknownRoute: (_) => MaterialPageRoute(
               builder: (_) => const NotFoundScreen(),

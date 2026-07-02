@@ -155,13 +155,13 @@ class ExerciseProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadExerciseLogs() async {
+  Future<void> loadExerciseLogs(String userId) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _exerciseLogs = await _exerciseService.getExerciseLogs();
+      _exerciseLogs = await _exerciseService.getExerciseLogs(userId);
       _calculateStreak();
     } on ApiException catch (e) {
       _errorMessage = e.message;

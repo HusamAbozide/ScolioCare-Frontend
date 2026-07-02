@@ -14,7 +14,14 @@ class AnalysisResultsScreen extends StatelessWidget {
         title: const Text('Analysis Results'),
         leading: IconButton(
           icon: const Icon(Icons.chevron_left),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Go back to dashboard if nothing to pop
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacementNamed(context, '/dashboard');
+            }
+          },
         ),
         actions: [
           IconButton(

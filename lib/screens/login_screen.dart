@@ -15,14 +15,16 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _acceptedDisclaimer = false;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     super.dispose();
   }
 
@@ -33,27 +35,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (_isLogin) {
       await auth.signIn(_emailController.text, _passwordController.text);
+
+      if (mounted) {
+        if (auth.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(auth.errorMessage!),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        } else if (auth.isLoggedIn) {
+          Navigator.pushReplacementNamed(context, '/profile-setup');
+        }
+      }
     } else {
-      // Split name into first and last
-      final nameParts = _nameController.text.trim().split(' ');
-      final firstName = nameParts.first;
-      final lastName =
-          nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      // Sign up
+      final success = await auth.signUp(
+        _firstNameController.text.trim(),
+        _lastNameController.text.trim(),
+        _emailController.text,
+        _passwordController.text,
+      );
 
-      await auth.signUp(
-          firstName, lastName, _emailController.text, _passwordController.text);
-    }
-
-    if (mounted) {
-      if (auth.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(auth.errorMessage!),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      } else if (auth.isLoggedIn) {
-        Navigator.pushReplacementNamed(context, '/profile-setup');
+      if (mounted) {
+        if (auth.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(auth.errorMessage!),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        } else if (success) {
+          // Registration successful - navigate to OTP verification
+          Navigator.pushNamed(
+            context,
+            '/otp-verification',
+            arguments: {
+              'email': _emailController.text,
+              'purpose': 'REGISTRATION',
+            },
+          );
+        }
       }
     }
   }
@@ -114,19 +136,33 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Name field (signup only)
+                          // First and last name fields (signup only)
                           if (!_isLogin) ...[
-                            Text('Full Name',
+                            Text('First Name',
                                 style: theme.textTheme.labelLarge),
                             const SizedBox(height: 8),
                             TextFormField(
-                              controller: _nameController,
+                              controller: _firstNameController,
                               decoration: const InputDecoration(
-                                hintText: 'Enter your full name',
+                                hintText: 'Enter your first name',
                               ),
                               validator: (v) =>
-                                  !_isLogin && (v == null || v.isEmpty)
-                                      ? 'Name is required'
+                                  !_isLogin && (v == null || v.trim().isEmpty)
+                                      ? 'First name is required'
+                                      : null,
+                            ),
+                            const SizedBox(height: 16),
+                            Text('Last Name',
+                                style: theme.textTheme.labelLarge),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _lastNameController,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter your last name',
+                              ),
+                              validator: (v) =>
+                                  !_isLogin && (v == null || v.trim().isEmpty)
+                                      ? 'Last name is required'
                                       : null,
                             ),
                             const SizedBox(height: 16),

@@ -28,6 +28,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profileProvider = context.watch<ProfileProvider>();
     final authProvider = context.watch<AuthProvider>();
     final profile = profileProvider.profile;
+    final fullName = authProvider.currentUser?.fullName ?? '';
+    final displayName = fullName.isNotEmpty
+        ? fullName
+        : (profile.name.isNotEmpty ? profile.name : 'User');
 
     return Scaffold(
       appBar: AppBar(
@@ -67,8 +71,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               radius: 50,
                               backgroundColor: Colors.white.withOpacity(0.2),
                               child: Text(
-                                profile.name.isNotEmpty
-                                    ? profile.name[0].toUpperCase()
+                                displayName.isNotEmpty
+                                    ? displayName[0].toUpperCase()
                                     : 'U',
                                 style: const TextStyle(
                                   fontSize: 40,
@@ -79,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              profile.name.isNotEmpty ? profile.name : 'User',
+                              displayName,
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,

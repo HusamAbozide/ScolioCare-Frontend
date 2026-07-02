@@ -32,7 +32,7 @@ class ReportService {
     }
 
     final response = await _apiClient.post<Report>(
-      '/report/generate',
+      ApiConfig.reportGenerate,
       data: {'analysisId': analysisId},
       fromJsonT: (json) => Report.fromJson(json as Map<String, dynamic>),
     );
@@ -69,12 +69,37 @@ class ReportService {
     }
 
     final response = await _apiClient.get(
-      '/report/list/mock-user-123',
+      ApiConfig.reportMyReports,
       queryParameters: {'page': page, 'size': size},
     );
 
     if (response.success && response.data != null) {
       final list = response.data as List;
+      return list
+          .map((item) => Report.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    return [];
+  }
+
+  Future<List<Report>> getReportListPaginated({
+    int page = 0,
+    int size = 20,
+  }) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      return getReportList(page: page, size: size);
+    }
+
+    final response = await _apiClient.get(
+      ApiConfig.reportMyReportsPaginated,
+      queryParameters: {'page': page, 'size': size},
+    );
+
+    if (response.success && response.data != null) {
+      final pageData = response.data as Map<String, dynamic>;
+      final list = pageData['content'] as List? ?? [];
       return list
           .map((item) => Report.fromJson(item as Map<String, dynamic>))
           .toList();
@@ -107,7 +132,25 @@ class ReportService {
     }
 
     final response = await _apiClient.get<Report>(
-      '/report/$reportId',
+      ApiConfig.reportById(reportId),
+      fromJsonT: (json) => Report.fromJson(json as Map<String, dynamic>),
+    );
+
+    if (response.success && response.data != null) {
+      return response.data!;
+    }
+
+    throw Exception(response.message ?? 'Failed to get report');
+  }
+
+  Future<Report> getReportByAnalysisId(String analysisId) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      return getReport('mock-report-for-$analysisId');
+    }
+
+    final response = await _apiClient.get<Report>(
+      ApiConfig.reportByAnalysisId(analysisId),
       fromJsonT: (json) => Report.fromJson(json as Map<String, dynamic>),
     );
 
@@ -131,29 +174,28 @@ class ReportService {
     final savePath = '${dir.path}/report-$reportId.pdf';
 
     await _apiClient.download(
-      '/report/$reportId/download',
+      ApiConfig.reportDownload(reportId),
       savePath,
     );
 
     return savePath;
   }
 
-  Future<Map<String, dynamic>> getReportStatus(String reportId) async {
+  Future<String> getReportStatus(String reportId) async {
     // Mock mode
     if (ApiConfig.useMockMode) {
       await Future.delayed(const Duration(milliseconds: 200));
-      return {
-        'status': 'COMPLETED',
-        'progress': 100,
-      };
+      return 'COMPLETED';
     }
 
-    final response = await _apiClient.get('/report/$reportId/status');
+    final response = await _apiClient.get(
+      ApiConfig.reportStatus(reportId),
+    );
 
     if (response.success && response.data != null) {
-      return response.data as Map<String, dynamic>;
+      return response.data as String;
     }
 
-    return {'status': 'UNKNOWN', 'progress': 0};
+    return 'UNKNOWN';
   }
 }
