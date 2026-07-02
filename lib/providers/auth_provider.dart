@@ -346,8 +346,8 @@ class AuthProvider extends ChangeNotifier {
     User? fallbackUser,
   }) {
     return User(
-      userId: profile.userId,
-      email: fallbackUser?.email ?? 'user@example.com',
+      userId: profile.userId ?? fallbackUser?.userId ?? '',
+      email: profile.email ?? fallbackUser?.email ?? 'user@example.com',
       firstName: profile.firstName,
       lastName: profile.lastName,
       phone: fallbackUser?.phone,

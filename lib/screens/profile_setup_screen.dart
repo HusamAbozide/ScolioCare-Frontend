@@ -115,13 +115,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
                         if (mounted) {
                           if (provider.errorMessage == null) {
-                            // Success - navigate away
-                            if (Navigator.canPop(context)) {
-                              Navigator.pop(context);
-                            } else {
-                              Navigator.pushReplacementNamed(
-                                  context, '/dashboard');
-                            }
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/dashboard',
+                              (_) => false,
+                            );
                           } else {
                             // Error - show message
                             ScaffoldMessenger.of(context).showSnackBar(

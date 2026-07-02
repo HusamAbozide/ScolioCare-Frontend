@@ -270,12 +270,27 @@ class AuthService {
     if (response.success && response.data != null) {
       // Check if tokens are included in the response
       if (response.data!.containsKey('accessToken')) {
+        final accessToken = response.data!['accessToken'] as String;
+        final refreshToken = response.data!['refreshToken'] as String;
+        final claims = _decodeJwtClaims(accessToken);
+        final userId = claims['userId'] as String?;
+
+        if (userId == null || userId.isEmpty) {
+          throw Exception(
+              'OTP verification response did not include a user ID');
+        }
+
         // Store tokens
         await _apiClient.storeTokens(
-          response.data!['accessToken'] as String,
-          response.data!['refreshToken'] as String,
-          response.data!['userId'] as String,
+          accessToken,
+          refreshToken,
+          userId,
         );
+
+        return {
+          ...response.data!,
+          'userId': userId,
+        };
       }
       return response.data;
     }
