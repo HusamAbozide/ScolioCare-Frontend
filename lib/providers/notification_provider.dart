@@ -4,13 +4,16 @@ import '../core/models/notification/notification.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _notificationService;
+  final String? Function() _getUserId;
 
   List<AppNotification> _notifications = [];
   bool _isLoading = false;
   String? _error;
   int _unreadCount = 0;
 
-  NotificationProvider(this._notificationService);
+  NotificationProvider(this._notificationService,
+      {String? Function()? getUserId})
+      : _getUserId = getUserId ?? (() => 'mock-user-123');
 
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
   bool get isLoading => _isLoading;
@@ -18,12 +21,19 @@ class NotificationProvider extends ChangeNotifier {
   int get unreadCount => _unreadCount;
 
   Future<void> loadNotifications() async {
+    final userId = _getUserId();
+    if (userId == null) {
+      _error = 'User not logged in';
+      notifyListeners();
+      return;
+    }
+
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      _notifications = await _notificationService.getNotifications();
+      _notifications = await _notificationService.getNotifications(userId);
 
       _isLoading = false;
       notifyListeners();
@@ -35,8 +45,11 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> loadUnreadCount() async {
+    final userId = _getUserId();
+    if (userId == null) return;
+
     try {
-      _unreadCount = await _notificationService.getUnreadCount();
+      _unreadCount = await _notificationService.getUnreadCount(userId);
       notifyListeners();
     } catch (e) {
       // Silently fail for unread count
@@ -44,8 +57,11 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> markAsRead(String notificationId) async {
+    final userId = _getUserId();
+    if (userId == null) return;
+
     try {
-      await _notificationService.markAsRead(notificationId);
+      await _notificationService.markAsRead(userId, [notificationId]);
 
       // Update local state
       final index = _notifications.indexWhere(
@@ -76,11 +92,19 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> markAllAsRead() async {
+    final userId = _getUserId();
+    if (userId == null) return;
+
     try {
-      // Mark all unread notifications
-      for (final notification in _notifications.where((n) => !n.isRead)) {
-        await _notificationService.markAsRead(notification.notificationId);
-      }
+      // Get all unread notification IDs
+      final unreadIds = _notifications
+          .where((n) => !n.isRead)
+          .map((n) => n.notificationId)
+          .toList();
+
+      if (unreadIds.isEmpty) return;
+
+      await _notificationService.markAsRead(userId, unreadIds);
 
       // Update local state
       _notifications = _notifications.map((n) {
@@ -109,8 +133,11 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<void> cancelNotification(String notificationId) async {
+    final userId = _getUserId();
+    if (userId == null) return;
+
     try {
-      await _notificationService.cancelNotification(notificationId);
+      await _notificationService.cancelNotifications(userId, [notificationId]);
 
       // Remove from local state
       final wasUnread = _notifications
@@ -128,6 +155,21 @@ class NotificationProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Failed to cancel notification: $e';
       notifyListeners();
+    }
+  }
+
+  Future<void> registerDeviceToken(String deviceToken, String platform) async {
+    final userId = _getUserId();
+    if (userId == null) return;
+
+    try {
+      await _notificationService.registerDeviceToken(
+        userId: userId,
+        deviceToken: deviceToken,
+        platform: platform,
+      );
+    } catch (e) {
+      // Silently fail for device token registration
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/scan_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/chat_fab.dart';
 
 class ScanHistoryScreen extends StatefulWidget {
   const ScanHistoryScreen({super.key});
@@ -54,6 +55,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen>
           );
         },
       ),
+      floatingActionButton: const ChatFab(),
     );
   }
 }

@@ -17,7 +17,11 @@ class ApiClient {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      contentType: Headers.jsonContentType,
     ));
+
+    // Debug logging - remove in production
+    print('ApiClient initialized with baseUrl: ${ApiConfig.baseUrl}');
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: _onRequest,
@@ -30,6 +34,12 @@ class ApiClient {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    // Debug logging - remove in production
+    print('Making ${options.method} request to: ${options.uri}');
+    if (options.data != null) {
+      print('Request data: ${options.data}');
+    }
+
     final token = await _secureStorage.read(key: ApiConfig.accessTokenKey);
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -157,14 +167,17 @@ class ApiClient {
   }
 
   // Generic DELETE request
+  // Generic DELETE request
   Future<ApiResponse<T>> delete<T>(
     String path, {
+    dynamic data,
     Map<String, dynamic>? queryParameters,
     T Function(Object? json)? fromJsonT,
   }) async {
     try {
       final response = await _dio.delete(
         path,
+        data: data,
         queryParameters: queryParameters,
       );
       return ApiResponse.fromJson(response.data, fromJsonT);
@@ -222,6 +235,11 @@ class ApiClient {
   // Get stored access token
   Future<String?> getAccessToken() async {
     return await _secureStorage.read(key: ApiConfig.accessTokenKey);
+  }
+
+  // Get stored user ID
+  Future<String?> getUserId() async {
+    return await _secureStorage.read(key: ApiConfig.userIdKey);
   }
 
   // Clear all tokens

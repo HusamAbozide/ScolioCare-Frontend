@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
+import '../widgets/chat_fab.dart';
 
 class ImageCaptureScreen extends StatefulWidget {
   const ImageCaptureScreen({super.key});
@@ -76,41 +77,52 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _step == 0
-              ? 'Capture Tips'
-              : _step == 1
-                  ? 'Review Photo'
-                  : 'Validating...',
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: () {
-            if (_step > 0) {
-              setState(() {
-                _step--;
-                if (_step == 0) _imageFile = null;
-              });
-            } else {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvoked: (didPop) {
+        if (!didPop && _step > 0) {
+          setState(() {
+            _step--;
+            if (_step == 0) _imageFile = null;
+          });
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _step == 0
+                ? 'Capture Tips'
+                : _step == 1
+                    ? 'Review Photo'
+                    : 'Validating...',
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () {
+              if (_step > 0) {
+                setState(() {
+                  _step--;
+                  if (_step == 0) _imageFile = null;
+                });
               } else {
-                Navigator.pushReplacementNamed(context, '/dashboard');
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                } else {
+                  Navigator.pushReplacementNamed(context, '/dashboard');
+                }
               }
-            }
-          },
+            },
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _step == 0
-              ? _buildTips(theme)
-              : _step == 1
-                  ? _buildPreview(theme)
-                  : _buildValidation(theme),
+        body: SafeArea(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _step == 0
+                ? _buildTips(theme)
+                : _step == 1
+                    ? _buildPreview(theme)
+                    : _buildValidation(theme),
+          ),
         ),
       ),
     );
@@ -373,7 +385,7 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
 
         const SizedBox(height: 32),
         FilledButton(
-          onPressed: () => Navigator.pushReplacementNamed(context, '/results'),
+          onPressed: () => Navigator.pushNamed(context, '/results'),
           child: const Text('View Results'),
         ),
       ],

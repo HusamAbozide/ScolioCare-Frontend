@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/chat_fab.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
@@ -216,6 +217,7 @@ class ReportsScreen extends StatelessWidget {
           ],
         ),
       ),
+      floatingActionButton: const ChatFab(),
     );
   }
 

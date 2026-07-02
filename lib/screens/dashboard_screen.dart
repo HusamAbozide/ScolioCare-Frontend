@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/mobile_layout.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -15,6 +17,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final auth = context.watch<AuthProvider>();
+    final fullName = auth.currentUser?.fullName ?? '';
+    final displayName = fullName.isNotEmpty ? fullName : 'User';
 
     return Scaffold(
       key: _scaffoldKey,
@@ -73,9 +78,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         fontSize: 14,
                                       ),
                                     ),
-                                    const Text(
-                                      'Sarah Johnson',
-                                      style: TextStyle(
+                                    Text(
+                                      displayName,
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
@@ -470,6 +475,10 @@ class _AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final auth = context.watch<AuthProvider>();
+    final fullName = auth.currentUser?.fullName ?? '';
+    final displayName = fullName.isNotEmpty ? fullName : 'User';
+    final email = auth.currentUser?.email ?? 'user@example.com';
 
     return Drawer(
       child: Column(
@@ -487,19 +496,25 @@ class _AppDrawer extends StatelessWidget {
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: Colors.white.withOpacity(0.25),
-                  child:
-                      const Icon(Icons.person, color: Colors.white, size: 32),
+                  child: Text(
+                    displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Sarah Johnson',
-                  style: TextStyle(
+                Text(
+                  displayName,
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'sarah.johnson@email.com',
+                  email,
                   style: TextStyle(
                       color: Colors.white.withOpacity(0.75), fontSize: 13),
                 ),

@@ -122,8 +122,7 @@ class ReportProvider extends ChangeNotifier {
 
   Future<String?> checkReportStatus(String reportId) async {
     try {
-      final statusData = await _reportService.getReportStatus(reportId);
-      final status = statusData['status'] as String;
+      final status = await _reportService.getReportStatus(reportId);
 
       // Update local cache
       final index = _reports.indexWhere((r) => r.reportId == reportId);

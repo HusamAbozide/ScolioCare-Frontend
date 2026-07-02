@@ -98,10 +98,45 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: FilledButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       if (step == ProfileProvider.totalSteps) {
-                        provider.saveProfile();
-                        Navigator.pushReplacementNamed(context, '/dashboard');
+                        provider.setPersonalDetails(
+                          age: int.tryParse(_ageController.text.trim()),
+                          gender: _selectedGender,
+                          heightCm:
+                              double.tryParse(_heightController.text.trim()),
+                          weightKg:
+                              double.tryParse(_weightController.text.trim()),
+                          diagnosisTime: _diagnosisTime,
+                          scoliosisType: _scoliosisType,
+                          currentTreatment: _currentTreatment,
+                        );
+                        await provider.saveProfile();
+
+                        if (mounted) {
+                          if (provider.errorMessage == null) {
+                            // Success - navigate away
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            } else {
+                              Navigator.pushReplacementNamed(
+                                  context, '/dashboard');
+                            }
+                          } else {
+                            // Error - show message
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(provider.errorMessage!),
+                                backgroundColor: Colors.red,
+                                action: SnackBarAction(
+                                  label: 'OK',
+                                  textColor: Colors.white,
+                                  onPressed: () {},
+                                ),
+                              ),
+                            );
+                          }
+                        }
                       } else {
                         provider.nextStep();
                       }
@@ -167,7 +202,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D2340) : const Color(0xFFF0ECF5),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF2D2340)
+                      : const Color(0xFFF0ECF5),
                   border: Border.all(
                     color: i == _selectedAvatar
                         ? theme.colorScheme.primary
@@ -382,7 +419,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D2340) : const Color(0xFFF0ECF5),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF2D2340)
+                      : const Color(0xFFF0ECF5),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isSelected
@@ -553,7 +592,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   decoration: BoxDecoration(
                     color: isActive
                         ? theme.colorScheme.primary.withOpacity(0.1)
-                        : Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D2340) : const Color(0xFFF0ECF5),
+                        : Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF2D2340)
+                            : const Color(0xFFF0ECF5),
                     borderRadius: BorderRadius.circular(12),
                     border: isActive
                         ? Border.all(color: theme.colorScheme.primary, width: 2)
@@ -641,7 +682,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       decoration: BoxDecoration(
         color: active
             ? theme.colorScheme.primary.withOpacity(0.1)
-            : Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2D2340) : const Color(0xFFF0ECF5),
+            : Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF2D2340)
+                : const Color(0xFFF0ECF5),
         borderRadius: BorderRadius.circular(12),
         border: active
             ? Border.all(color: theme.colorScheme.primary, width: 2)
@@ -716,14 +759,25 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
+          Expanded(
+            flex: 2,
+            child: Text(label,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              softWrap: true,
               style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          Text(value,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );

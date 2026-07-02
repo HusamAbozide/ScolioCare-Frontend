@@ -7,7 +7,8 @@ class NotificationService {
 
   NotificationService(this._apiClient);
 
-  Future<List<AppNotification>> getNotifications({
+  Future<List<AppNotification>> getNotifications(
+    String userId, {
     int page = 0,
     int size = 20,
     String? type,
@@ -19,7 +20,7 @@ class NotificationService {
     }
 
     final response = await _apiClient.get(
-      '/notification/mock-user-123',
+      ApiConfig.notificationsByUserId(userId),
       queryParameters: {
         'page': page,
         'size': size,
@@ -37,7 +38,7 @@ class NotificationService {
     return [];
   }
 
-  Future<void> markAsRead(String notificationId) async {
+  Future<void> markAsRead(String userId, List<String> notificationIds) async {
     // Mock mode
     if (ApiConfig.useMockMode) {
       await Future.delayed(const Duration(milliseconds: 200));
@@ -45,8 +46,8 @@ class NotificationService {
     }
 
     final response = await _apiClient.post(
-      '/notification/read',
-      data: {'notificationId': notificationId},
+      '${ApiConfig.notificationRead}?userId=$userId',
+      data: {'notificationIds': notificationIds},
     );
 
     if (!response.success) {
@@ -54,23 +55,30 @@ class NotificationService {
     }
   }
 
-  Future<int> getUnreadCount() async {
+  Future<int> getUnreadCount(String userId) async {
     // Mock mode
     if (ApiConfig.useMockMode) {
       await Future.delayed(const Duration(milliseconds: 200));
       return 3; // Mock unread count
     }
 
-    final response = await _apiClient.get('/notification/unread-count');
+    final response = await _apiClient.get(
+      '${ApiConfig.notificationUnreadCount}?userId=$userId',
+    );
 
     if (response.success && response.data != null) {
-      return (response.data as Map<String, dynamic>)['count'] as int;
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return (data['count'] ?? data['unreadCount'] ?? 0) as int;
+      }
+      return data as int;
     }
 
     return 0;
   }
 
-  Future<void> cancelNotification(String notificationId) async {
+  Future<void> cancelNotifications(
+      String userId, List<String> notificationIds) async {
     // Mock mode
     if (ApiConfig.useMockMode) {
       await Future.delayed(const Duration(milliseconds: 200));
@@ -78,12 +86,36 @@ class NotificationService {
     }
 
     final response = await _apiClient.post(
-      '/notification/cancel',
-      data: {'notificationId': notificationId},
+      '${ApiConfig.notificationCancel}?userId=$userId',
+      data: {'notificationIds': notificationIds},
     );
 
     if (!response.success) {
-      throw Exception(response.message ?? 'Failed to cancel notification');
+      throw Exception(response.message ?? 'Failed to cancel notifications');
+    }
+  }
+
+  Future<void> registerDeviceToken({
+    required String userId,
+    required String deviceToken,
+    required String platform,
+  }) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      return;
+    }
+
+    final response = await _apiClient.post(
+      '${ApiConfig.notificationDeviceToken}?userId=$userId',
+      data: {
+        'deviceToken': deviceToken,
+        'platform': platform,
+      },
+    );
+
+    if (!response.success) {
+      throw Exception(response.message ?? 'Failed to register device token');
     }
   }
 

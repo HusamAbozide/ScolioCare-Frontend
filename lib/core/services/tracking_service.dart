@@ -28,7 +28,7 @@ class TrackingService {
     }
 
     final response = await _apiClient.post<ProgressTracking>(
-      '/progress/create',
+      ApiConfig.progressCreate,
       data: {
         'planId': planId,
         'trackingDate': date.toIso8601String(),
@@ -64,7 +64,7 @@ class TrackingService {
     }
 
     final response = await _apiClient.post<PainLevelTracking>(
-      '/pain/record',
+      ApiConfig.painRecord,
       data: PainLevelTracking(
         painTrackingId: '',
         progressId: progressId,
@@ -103,7 +103,7 @@ class TrackingService {
     }
 
     final response = await _apiClient.post<ScoliometerReading>(
-      '/scaliometer/record',
+      ApiConfig.scoliometerRecord,
       data: ScoliometerReading(
         readingId: '',
         progressId: progressId,
@@ -151,7 +151,7 @@ class TrackingService {
     });
 
     final response = await _apiClient.postMultipart<PosturePhoto>(
-      '/posture/upload',
+      ApiConfig.postureUpload,
       formData: formData,
       fromJsonT: (json) => PosturePhoto.fromJson(json as Map<String, dynamic>),
     );
@@ -183,7 +183,7 @@ class TrackingService {
     }
 
     final response = await _apiClient.post<ImageComparison>(
-      '/posture/compare',
+      ApiConfig.postureCompare,
       data: {
         'oldPhotoId': oldPhotoId,
         'newPhotoId': newPhotoId,
@@ -201,7 +201,8 @@ class TrackingService {
     throw Exception(response.message ?? 'Failed to compare photos');
   }
 
-  Future<List<ProgressTracking>> getProgressHistory({
+  Future<List<ProgressTracking>> getProgressHistory(
+    String userId, {
     int page = 0,
     int size = 20,
   }) async {
@@ -222,7 +223,7 @@ class TrackingService {
     }
 
     final response = await _apiClient.get(
-      '/progress/mock-user-123/history',
+      ApiConfig.progressByUserId(userId),
       queryParameters: {'page': page, 'size': size},
     );
 
@@ -237,7 +238,7 @@ class TrackingService {
     return [];
   }
 
-  Future<Map<String, dynamic>> getProgressSummary() async {
+  Future<Map<String, dynamic>> getProgressSummary(String userId) async {
     // Mock mode
     if (ApiConfig.useMockMode) {
       await Future.delayed(const Duration(milliseconds: 500));
@@ -251,12 +252,168 @@ class TrackingService {
       };
     }
 
-    final response = await _apiClient.get('/summary/mock-user-123');
+    final response = await _apiClient.get(
+      ApiConfig.progressSummary(userId),
+    );
 
     if (response.success && response.data != null) {
       return response.data as Map<String, dynamic>;
     }
 
     return {};
+  }
+
+  /// Get pain history for user
+  Future<List<PainLevelTracking>> getPainHistory(String userId) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      return List.generate(
+        5,
+        (index) => PainLevelTracking(
+          painTrackingId: 'mock-pain-$index',
+          progressId: 'mock-progress-$index',
+          painLevel: 5 - index,
+          painLocation: 'Lower Back',
+          painDescription: 'Mild discomfort',
+          recordedAt: DateTime.now().subtract(Duration(days: index * 3)),
+        ),
+      );
+    }
+
+    final response = await _apiClient.get(
+      ApiConfig.painHistory(userId),
+    );
+
+    if (response.success && response.data != null) {
+      final list = response.data as List;
+      return list
+          .map((item) =>
+              PainLevelTracking.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    return [];
+  }
+
+  /// Get scoliometer history for user
+  Future<List<ScoliometerReading>> getScoliometerHistory(String userId) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      return List.generate(
+        5,
+        (index) => ScoliometerReading(
+          readingId: 'mock-scolio-$index',
+          progressId: 'mock-progress-$index',
+          readingValue: 5.0 + (index * 0.5),
+          unit: 'degrees',
+          bodyPositionNotes: 'Forward bend test',
+          capturedAt: DateTime.now().subtract(Duration(days: index * 7)),
+        ),
+      );
+    }
+
+    final response = await _apiClient.get(
+      ApiConfig.scoliometerHistory(userId),
+    );
+
+    if (response.success && response.data != null) {
+      final list = response.data as List;
+      return list
+          .map((item) =>
+              ScoliometerReading.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    return [];
+  }
+
+  /// Get posture photos for user
+  Future<List<PosturePhoto>> getPosturePhotos(String userId) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      return List.generate(
+        3,
+        (index) => PosturePhoto(
+          photoId: 'mock-photo-$index',
+          userId: userId,
+          photoUrl: '/mock/posture/photo-$index.jpg',
+          view: index == 0 ? 'FRONT' : (index == 1 ? 'BACK' : 'SIDE'),
+          takenAt: DateTime.now().subtract(Duration(days: index * 30)),
+          monthTag: DateTime.now()
+              .subtract(Duration(days: index * 30))
+              .toIso8601String()
+              .substring(0, 7),
+          notes: 'Monthly progress photo',
+        ),
+      );
+    }
+
+    final response = await _apiClient.get(
+      ApiConfig.postureByUserId(userId),
+    );
+
+    if (response.success && response.data != null) {
+      final list = response.data as List;
+      return list
+          .map((item) => PosturePhoto.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    return [];
+  }
+
+  /// Get posture photo comparisons for user
+  Future<List<ImageComparison>> getPostureComparisons(String userId) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      return [];
+    }
+
+    final response = await _apiClient.get(
+      ApiConfig.postureComparisons(userId),
+    );
+
+    if (response.success && response.data != null) {
+      final list = response.data as List;
+      return list
+          .map((item) => ImageComparison.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    return [];
+  }
+
+  /// Update exercise progress
+  Future<void> updateExerciseProgress({
+    required String planId,
+    required String exerciseId,
+    required int completedSets,
+    required int completedReps,
+    String? notes,
+  }) async {
+    // Mock mode
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return;
+    }
+
+    final response = await _apiClient.post(
+      ApiConfig.exerciseProgressUpdate,
+      data: {
+        'planId': planId,
+        'exerciseId': exerciseId,
+        'completedSets': completedSets,
+        'completedReps': completedReps,
+        'notes': notes,
+      },
+    );
+
+    if (!response.success) {
+      throw Exception(response.message ?? 'Failed to update exercise progress');
+    }
   }
 }

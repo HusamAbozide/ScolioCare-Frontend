@@ -22,7 +22,7 @@ class ChatService {
     }
 
     final response = await _apiClient.post<ChatSession>(
-      '/chat/session/start',
+      ApiConfig.chatSessionStart,
       data: {},
       fromJsonT: (json) => ChatSession.fromJson(json as Map<String, dynamic>),
     );
@@ -54,7 +54,7 @@ class ChatService {
     }
 
     final response = await _apiClient.post<ChatMessage>(
-      '/chat/session/$sessionId/message',
+      ApiConfig.chatSessionMessage(sessionId),
       data: {'text': text},
       fromJsonT: (json) => ChatMessage.fromJson(json as Map<String, dynamic>),
     );
@@ -78,13 +78,25 @@ class ChatService {
     }
 
     final response = await _apiClient.get(
-      '/chat/session/$sessionId/messages',
+      ApiConfig.chatSessionMessages(sessionId),
       queryParameters: {'page': page, 'size': size},
     );
 
     if (response.success && response.data != null) {
-      final list = response.data as List;
-      return list
+      final messagesData = response.data;
+
+      // Handle both direct list and wrapped response
+      List<dynamic> messagesList;
+      if (messagesData is List) {
+        messagesList = messagesData;
+      } else if (messagesData is Map<String, dynamic> &&
+          messagesData.containsKey('messages')) {
+        messagesList = messagesData['messages'] as List;
+      } else {
+        return [];
+      }
+
+      return messagesList
           .map((item) => ChatMessage.fromJson(item as Map<String, dynamic>))
           .toList();
     }
@@ -100,7 +112,7 @@ class ChatService {
     }
 
     final response = await _apiClient.post(
-      '/chat/session/$sessionId/end',
+      ApiConfig.chatSessionEnd(sessionId),
       data: {},
     );
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../api/api_client.dart';
 import '../api/api_config.dart';
 import '../models/auth/login_request.dart';
@@ -18,20 +20,14 @@ class AuthService {
       return _createMockAuthResponse(email);
     }
 
-    final response = await _apiClient.post<AuthResponse>(
+    final response = await _apiClient.post<Map<String, dynamic>>(
       ApiConfig.login,
-      data: LoginRequest(identifier: email, password: password).toJson(),
-      fromJsonT: (json) => AuthResponse.fromJson(json as Map<String, dynamic>),
+      data: LoginRequest(email: email, password: password).toJson(),
+      fromJsonT: (json) => json as Map<String, dynamic>,
     );
 
     if (response.success && response.data != null) {
-      final authData = response.data!;
-      await _apiClient.storeTokens(
-        authData.accessToken,
-        authData.refreshToken,
-        authData.user.userId,
-      );
-      return authData;
+      return await _handleTokenResponse(response.data!, fallbackEmail: email);
     }
 
     throw Exception(response.message ?? 'Login failed');
@@ -45,20 +41,48 @@ class AuthService {
       return _createMockAuthResponse(request.email);
     }
 
-    final response = await _apiClient.post<AuthResponse>(
+    // Ensure email is lowercase for consistency
+    final cleanRequest = RegisterRequest(
+      email: request.email.trim().toLowerCase(),
+      password: request.password,
+      firstName: request.firstName,
+      lastName: request.lastName,
+    );
+
+    final response = await _apiClient.post<Map<String, dynamic>>(
       ApiConfig.register,
-      data: request.toJson(),
-      fromJsonT: (json) => AuthResponse.fromJson(json as Map<String, dynamic>),
+      data: cleanRequest.toJson(),
+      fromJsonT: (json) => json as Map<String, dynamic>,
     );
 
     if (response.success && response.data != null) {
-      final authData = response.data!;
-      await _apiClient.storeTokens(
-        authData.accessToken,
-        authData.refreshToken,
-        authData.user.userId,
+      // Check if this is an email verification required response
+      if (response.data!.containsKey('message') &&
+          response.data!.containsKey('email')) {
+        // Registration successful, but email verification needed
+        // Return a temporary auth response without tokens
+        final user = User(
+          userId: 'pending-verification',
+          email: cleanRequest.email,
+          isActive: false,
+          emailVerified: false,
+          phoneVerified: false,
+          createdAt: DateTime.now(),
+          lastLogin: DateTime.now(),
+        );
+
+        return AuthResponse(
+          accessToken: '',
+          refreshToken: '',
+          user: user,
+        );
+      }
+
+      // If tokens are provided (shouldn't happen for register, but handle it)
+      return await _handleTokenResponse(
+        response.data!,
+        fallbackEmail: cleanRequest.email,
       );
-      return authData;
     }
 
     throw Exception(response.message ?? 'Registration failed');
@@ -71,20 +95,14 @@ class AuthService {
       return _createMockAuthResponse('user@gmail.com');
     }
 
-    final response = await _apiClient.post<AuthResponse>(
+    final response = await _apiClient.post<Map<String, dynamic>>(
       ApiConfig.googleAuth,
       data: {'googleIdToken': googleIdToken},
-      fromJsonT: (json) => AuthResponse.fromJson(json as Map<String, dynamic>),
+      fromJsonT: (json) => json as Map<String, dynamic>,
     );
 
     if (response.success && response.data != null) {
-      final authData = response.data!;
-      await _apiClient.storeTokens(
-        authData.accessToken,
-        authData.refreshToken,
-        authData.user.userId,
-      );
-      return authData;
+      return await _handleTokenResponse(response.data!);
     }
 
     throw Exception(response.message ?? 'Google sign-in failed');
@@ -97,23 +115,62 @@ class AuthService {
       return _createMockAuthResponse('user@icloud.com');
     }
 
-    final response = await _apiClient.post<AuthResponse>(
+    final response = await _apiClient.post<Map<String, dynamic>>(
       ApiConfig.appleAuth,
       data: {'appleIdentityToken': appleIdentityToken},
-      fromJsonT: (json) => AuthResponse.fromJson(json as Map<String, dynamic>),
+      fromJsonT: (json) => json as Map<String, dynamic>,
     );
 
     if (response.success && response.data != null) {
-      final authData = response.data!;
-      await _apiClient.storeTokens(
-        authData.accessToken,
-        authData.refreshToken,
-        authData.user.userId,
-      );
-      return authData;
+      return await _handleTokenResponse(response.data!);
     }
 
     throw Exception(response.message ?? 'Apple sign-in failed');
+  }
+
+  Future<AuthResponse> _handleTokenResponse(
+    Map<String, dynamic> responseData, {
+    String? fallbackEmail,
+  }) async {
+    final accessToken = responseData['accessToken'] as String;
+    final refreshToken = responseData['refreshToken'] as String;
+    final claims = _decodeJwtClaims(accessToken);
+    final userId = claims['userId'] as String?;
+    final email =
+        (claims['sub'] as String?) ?? fallbackEmail ?? 'user@example.com';
+
+    if (userId == null || userId.isEmpty) {
+      throw Exception('Authentication response did not include a user ID');
+    }
+
+    await _apiClient.storeTokens(accessToken, refreshToken, userId);
+
+    final user = User(
+      userId: userId,
+      email: email,
+      isActive: true,
+      emailVerified: true,
+      phoneVerified: false,
+      createdAt: DateTime.now(),
+      lastLogin: DateTime.now(),
+    );
+
+    return AuthResponse(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: user,
+    );
+  }
+
+  Map<String, dynamic> _decodeJwtClaims(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      throw Exception('Invalid token format');
+    }
+
+    final normalized = base64Url.normalize(parts[1]);
+    final payload = utf8.decode(base64Url.decode(normalized));
+    return jsonDecode(payload) as Map<String, dynamic>;
   }
 
   Future<void> logout() async {
@@ -132,6 +189,98 @@ class AuthService {
   Future<bool> isLoggedIn() async {
     final token = await _apiClient.getAccessToken();
     return token != null && token.isNotEmpty;
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    // Mock mode for development without backend
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(seconds: 1));
+      return true;
+    }
+
+    final response = await _apiClient.put<Map<String, dynamic>>(
+      ApiConfig.changePassword,
+      data: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+      fromJsonT: (json) => json as Map<String, dynamic>,
+    );
+
+    return response.success;
+  }
+
+  Future<bool> sendOtp({
+    required String email,
+    required String purpose,
+  }) async {
+    // Mock mode for development without backend
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(seconds: 1));
+      return true;
+    }
+
+    // Ensure email is lowercase for consistency
+    final cleanEmail = email.trim().toLowerCase();
+
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      ApiConfig.sendOtp,
+      data: {
+        'email': cleanEmail,
+        'purpose': purpose,
+      },
+      fromJsonT: (json) => json as Map<String, dynamic>,
+    );
+
+    return response.success;
+  }
+
+  Future<Map<String, dynamic>?> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    // Mock mode for development without backend
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(seconds: 1));
+      return {'verified': true};
+    }
+
+    // Trim whitespace and ensure consistent format
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanOtp = otp.trim();
+
+    print(
+        'Verifying OTP - Email: "$cleanEmail", OTP: "$cleanOtp" (length: ${cleanOtp.length})');
+
+    // Explicitly wrap OTP as string to prevent JSON encoder from converting to number
+    final requestBody = jsonEncode({
+      'email': cleanEmail,
+      'otp': cleanOtp.toString(), // Force string type
+    });
+
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      ApiConfig.verifyOtp,
+      data: requestBody,
+      fromJsonT: (json) => json as Map<String, dynamic>,
+    );
+
+    if (response.success && response.data != null) {
+      // Check if tokens are included in the response
+      if (response.data!.containsKey('accessToken')) {
+        // Store tokens
+        await _apiClient.storeTokens(
+          response.data!['accessToken'] as String,
+          response.data!['refreshToken'] as String,
+          response.data!['userId'] as String,
+        );
+      }
+      return response.data;
+    }
+
+    return null;
   }
 
   // Mock data generator for development

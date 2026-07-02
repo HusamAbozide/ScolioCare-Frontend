@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/chat_fab.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -19,6 +21,11 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
+          final auth = context.watch<AuthProvider>();
+          final fullName = auth.currentUser?.fullName ?? '';
+          final displayName = fullName.isNotEmpty ? fullName : 'User';
+          final email = auth.currentUser?.email ?? 'user@example.com';
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -47,13 +54,13 @@ class SettingsScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Sarah Johnson',
+                              Text(displayName,
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   )),
                               const SizedBox(height: 2),
                               Text(
-                                'sarah@example.com',
+                                email,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -170,6 +177,83 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
+                // Posture & Tracking
+                Text('Posture & Tracking',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    )),
+                const SizedBox(height: 12),
+                Card(
+                  child: Column(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.photo_camera,
+                        title: 'Posture Photos',
+                        subtitle: 'Track your posture progress',
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/posture-tracking'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Rewards
+                Text('Rewards',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    )),
+                const SizedBox(height: 12),
+                Card(
+                  child: Column(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.emoji_events_outlined,
+                        title: 'Rewards & Achievements',
+                        subtitle: 'View your earned rewards',
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.pushNamed(context, '/rewards'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Security & Account
+                Text('Security & Account',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    )),
+                const SizedBox(height: 12),
+                Card(
+                  child: Column(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.lock_outline,
+                        title: 'Change Password',
+                        subtitle: 'Update your account password',
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/change-password'),
+                      ),
+                      const Divider(height: 1, indent: 56),
+                      _SettingsTile(
+                        icon: Icons.delete_forever,
+                        title: 'Delete Account',
+                        subtitle: 'Permanently remove your account',
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/account-deletion'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
                 // Legal
                 Text('Legal',
                     style: theme.textTheme.titleSmall?.copyWith(
@@ -181,17 +265,34 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _SettingsTile(
+                        icon: Icons.medical_information_outlined,
+                        title: 'Medical Disclaimer',
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/medical-disclaimer'),
+                      ),
+                      const Divider(height: 1, indent: 56),
+                      _SettingsTile(
                         icon: Icons.privacy_tip_outlined,
                         title: 'Privacy Policy',
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
+                        onTap: () => Navigator.pushNamed(context, '/privacy'),
                       ),
                       const Divider(height: 1, indent: 56),
                       _SettingsTile(
                         icon: Icons.gavel,
                         title: 'Terms of Service',
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
+                        onTap: () => Navigator.pushNamed(context, '/terms'),
+                      ),
+                      const Divider(height: 1, indent: 56),
+                      _SettingsTile(
+                        icon: Icons.admin_panel_settings_outlined,
+                        title: 'Consent Management',
+                        subtitle: 'Manage your consent preferences',
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/consent-management'),
                       ),
                       const Divider(height: 1, indent: 56),
                       _SettingsTile(
@@ -229,6 +330,7 @@ class SettingsScreen extends StatelessWidget {
           );
         },
       ),
+      floatingActionButton: const ChatFab(),
     );
   }
 
