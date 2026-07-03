@@ -15,16 +15,15 @@ class PostureService {
   Future<PosturePhoto> uploadPosturePhoto({
     required File imageFile,
     required String viewAngle,
+    required String name,
     String? notes,
   }) async {
     try {
       final fileName = imageFile.path.split(Platform.pathSeparator).last;
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(imageFile.path, filename: fileName),
-        if (notes != null && notes.trim().isNotEmpty)
-          'notes': '${viewAngle.trim().toUpperCase()}|${notes.trim()}'
-        else
-          'notes': viewAngle.trim().toUpperCase(),
+        'notes':
+            '${viewAngle.trim().toUpperCase()}|${name.trim()}|${notes?.trim() ?? ''}',
       });
 
       final response = await _apiClient.postMultipart<PosturePhoto>(
@@ -111,6 +110,34 @@ class PostureService {
     }
   }
 
+  Future<void> deletePosturePhoto(String photoId) async {
+    try {
+      final response = await _apiClient.delete<void>(
+        ApiConfig.postureDeletePhoto(photoId),
+      );
+
+      if (!response.success) {
+        throw Exception(response.message ?? 'Failed to delete posture photo');
+      }
+    } catch (e) {
+      throw Exception('Error deleting posture photo: $e');
+    }
+  }
+
+  Future<void> deletePostureComparison(String comparisonId) async {
+    try {
+      final response = await _apiClient.delete<void>(
+        ApiConfig.postureDeleteComparison(comparisonId),
+      );
+
+      if (!response.success) {
+        throw Exception(response.message ?? 'Failed to delete comparison');
+      }
+    } catch (e) {
+      throw Exception('Error deleting comparison: $e');
+    }
+  }
+
   /// Get mock posture photos for development/testing
   List<PosturePhoto> getMockPosturePhotos() {
     return [
@@ -121,6 +148,7 @@ class PostureService {
         capturedAt: DateTime.now().subtract(const Duration(days: 30)),
         viewAngle: 'FRONT',
         notes: 'Initial posture photo',
+        name: 'Baseline front',
       ),
       PosturePhoto(
         id: '2',
@@ -129,6 +157,7 @@ class PostureService {
         capturedAt: DateTime.now().subtract(const Duration(days: 20)),
         viewAngle: 'BACK',
         notes: 'Back view for comparison',
+        name: 'Back check',
       ),
       PosturePhoto(
         id: '3',
@@ -137,6 +166,7 @@ class PostureService {
         capturedAt: DateTime.now().subtract(const Duration(days: 7)),
         viewAngle: 'LEFT',
         notes: 'Left side profile',
+        name: 'Left profile',
       ),
       PosturePhoto(
         id: '4',
@@ -145,6 +175,7 @@ class PostureService {
         capturedAt: DateTime.now(),
         viewAngle: 'FRONT',
         notes: 'Latest posture photo',
+        name: 'Latest front',
       ),
     ];
   }

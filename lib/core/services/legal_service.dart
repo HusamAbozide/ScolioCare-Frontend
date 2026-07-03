@@ -83,6 +83,27 @@ class LegalService {
   }
 
   /// Accept consent
+  Future<Map<String, bool>> getMyConsents() async {
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      return {};
+    }
+
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      ApiConfig.consentMy,
+      fromJsonT: (json) => json as Map<String, dynamic>,
+    );
+
+    if (response.success && response.data != null) {
+      return response.data!.map(
+        (key, value) => MapEntry(key, value == true),
+      );
+    }
+
+    throw Exception(response.message ?? 'Failed to load consents');
+  }
+
+  /// Accept consent
   Future<void> acceptConsent(String type) async {
     // Mock mode
     if (ApiConfig.useMockMode) {

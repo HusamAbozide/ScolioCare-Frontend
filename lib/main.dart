@@ -41,6 +41,7 @@ import 'screens/rewards_catalog_screen.dart';
 import 'screens/terms_screen.dart';
 import 'screens/privacy_screen.dart';
 import 'screens/medical_disclaimer_screen.dart';
+import 'screens/medical_consent_screen.dart';
 import 'screens/consent_management_screen.dart';
 import 'screens/posture_tracking_screen.dart';
 import 'screens/change_password_screen.dart';
@@ -138,13 +139,19 @@ class ScolioCareApp extends StatelessWidget {
               '/login': (_) => const LoginScreen(),
               '/profile-setup': (_) => const ProfileSetupScreen(),
               '/dashboard': (_) => const DashboardScreen(),
-              '/capture': (_) => const ImageCaptureScreen(),
+              '/capture': (_) => const MedicalConsentScreen(
+                    allowSkip: true,
+                    child: ImageCaptureScreen(),
+                  ),
               '/results': (_) => const AnalysisResultsScreen(),
               '/exercises': (_) => const ExerciseProgramScreen(),
               '/progress': (_) => const ProgressTrackingScreen(),
               '/scan-history': (_) => const ScanHistoryScreen(),
               '/scoliometer': (_) => const ScoliometerScreen(),
-              '/chatbot': (_) => const ChatbotScreen(),
+              '/chatbot': (_) => const MedicalConsentScreen(
+                    allowSkip: true,
+                    child: ChatbotScreen(),
+                  ),
               '/reports': (_) => const ReportsScreen(),
               '/settings': (_) => const SettingsScreen(),
               '/profile': (_) => const ProfileScreen(),
@@ -155,6 +162,7 @@ class ScolioCareApp extends StatelessWidget {
               '/privacy': (_) => const PrivacyScreen(),
               '/settings/privacy': (_) => const PrivacyScreen(),
               '/medical-disclaimer': (_) => const MedicalDisclaimerScreen(),
+              '/medical-consent': (_) => const MedicalConsentScreen(),
               '/consent-management': (_) => const ConsentManagementScreen(),
               '/posture-tracking': (_) => const PostureTrackingScreen(),
               '/change-password': (_) => const ChangePasswordScreen(),

@@ -25,6 +25,7 @@ class PostureProvider with ChangeNotifier {
   Future<PosturePhoto?> uploadPhoto({
     required File imageFile,
     required String viewAngle,
+    required String name,
     String? notes,
   }) async {
     _isLoading = true;
@@ -42,6 +43,7 @@ class PostureProvider with ChangeNotifier {
           imageUrl: imageFile.path,
           capturedAt: DateTime.now(),
           viewAngle: viewAngle,
+          name: name,
           notes: notes,
         );
         await Future.delayed(const Duration(seconds: 1));
@@ -50,6 +52,7 @@ class PostureProvider with ChangeNotifier {
         photo = await _postureService.uploadPosturePhoto(
           imageFile: imageFile,
           viewAngle: viewAngle,
+          name: name,
           notes: notes,
         );
       }
@@ -167,6 +170,51 @@ class PostureProvider with ChangeNotifier {
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> deletePhoto(String photoId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      if (!ApiConfig.useMockMode) {
+        await _postureService.deletePosturePhoto(photoId);
+      }
+      _photos.removeWhere((photo) => photo.id == photoId);
+      _comparisons.removeWhere((comparison) =>
+          comparison.beforePhoto.id == photoId ||
+          comparison.afterPhoto.id == photoId);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteComparison(String comparisonId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      if (!ApiConfig.useMockMode) {
+        await _postureService.deletePostureComparison(comparisonId);
+      }
+      _comparisons.removeWhere((comparison) => comparison.id == comparisonId);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 

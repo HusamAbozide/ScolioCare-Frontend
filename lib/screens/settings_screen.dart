@@ -44,9 +44,9 @@ class SettingsScreen extends StatelessWidget {
                             color: theme.colorScheme.primary.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Center(
+                          child: const Center(
                             child: Text('👤',
-                                style: const TextStyle(fontSize: 28)),
+                                style: TextStyle(fontSize: 28)),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -173,10 +173,13 @@ class SettingsScreen extends StatelessWidget {
                       _SettingsTile(
                         icon: Icons.photo_camera,
                         title: 'Posture Photos',
-                        subtitle: 'Track your posture progress',
+                        subtitle: 'Track posture progress in Progress',
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () =>
-                            Navigator.pushNamed(context, '/posture-tracking'),
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          '/progress',
+                          arguments: {'tabIndex': 3},
+                        ),
                       ),
                     ],
                   ),

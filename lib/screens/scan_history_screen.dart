@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/scan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chat_fab.dart';
@@ -19,6 +20,15 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      final scans = context.read<ScanProvider>();
+      scans.loadAnalysisHistory();
+      final userId = auth.userId;
+      if (userId != null) {
+        scans.loadAtrHistory(userId);
+      }
+    });
   }
 
   @override
@@ -29,6 +39,8 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan History'),
@@ -46,6 +58,35 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen>
       ),
       body: Consumer<ScanProvider>(
         builder: (context, provider, _) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (provider.errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 56, color: theme.colorScheme.error),
+                    const SizedBox(height: 12),
+                    Text(
+                      provider.errorMessage!,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: provider.loadAnalysisHistory,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           return TabBarView(
             controller: _tabController,
             children: [
@@ -259,7 +300,7 @@ class _ImageScansTab extends StatelessWidget {
               ),
             ),
             title: Text(
-              '${scan.severity}',
+              scan.severity,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: Column(

@@ -3,8 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/app_header.dart';
-import '../theme/app_theme.dart';
+import '../providers/profile_provider.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
@@ -109,13 +108,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _verifyOtp() async {
     final otp = _controllers.map((c) => c.text).join();
 
-    print('========== OTP VERIFICATION DEBUG ==========');
-    print('Email: ${widget.email}');
-    print('OTP entered: "$otp"');
-    print('OTP length: ${otp.length}');
-    print('OTP characters: ${otp.split('').map((c) => '[$c]').join(' ')}');
-    print('=========================================');
-
     if (otp.length != 6) {
       setState(() {
         _error = 'Please enter complete 6-digit OTP';
@@ -155,14 +147,22 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         // The backend should return tokens after successful OTP verification
         // Check if user is now logged in
         if (authProvider.isLoggedIn) {
+          context.read<ProfileProvider>().reset();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Email verified successfully!'),
               backgroundColor: Colors.green,
             ),
           );
-          // Navigate to profile setup
-          Navigator.pushReplacementNamed(context, '/profile-setup');
+          // New accounts see the medical consent screen before entering app setup.
+          Navigator.pushReplacementNamed(
+            context,
+            '/medical-consent',
+            arguments: {
+              'nextRoute': '/profile-setup',
+              'nextArguments': {'freshSetup': true},
+            },
+          );
         } else {
           // If not logged in, just show success and go back
           ScaffoldMessenger.of(context).showSnackBar(

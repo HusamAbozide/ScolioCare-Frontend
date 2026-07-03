@@ -24,6 +24,26 @@ class LegalProvider extends ChangeNotifier {
 
   bool isConsentGiven(String type) => _consents[type] ?? false;
 
+  Future<void> loadConsents() async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final consents = await _legalService.getMyConsents();
+      _consents
+        ..clear()
+        ..addAll(consents);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load consents: $e';
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadDisclaimer() async {
     try {
       _isLoading = true;
@@ -102,6 +122,12 @@ class LegalProvider extends ChangeNotifier {
   }
 
   void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void resetConsents() {
+    _consents.clear();
     _error = null;
     notifyListeners();
   }

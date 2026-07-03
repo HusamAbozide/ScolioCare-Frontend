@@ -6,9 +6,15 @@ import '../providers/posture_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/posture_photo.dart';
 import '../theme/app_theme.dart';
+import '../core/api/api_config.dart';
 
 class PostureTrackingScreen extends StatefulWidget {
-  const PostureTrackingScreen({Key? key}) : super(key: key);
+  final bool embedded;
+
+  const PostureTrackingScreen({
+    Key? key,
+    this.embedded = false,
+  }) : super(key: key);
 
   @override
   State<PostureTrackingScreen> createState() => _PostureTrackingScreenState();
@@ -56,6 +62,7 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
       );
 
       if (viewAngle == null) return;
+      if (!mounted) return;
       _selectedViewAngle = viewAngle;
 
       // Show options: camera or gallery
@@ -91,19 +98,23 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
       );
 
       if (image == null) return;
+      if (!mounted) return;
 
-      // Show notes dialog
-      final notes = await showDialog<String>(
+      // Show details dialog
+      final details = await showDialog<Map<String, String?>>(
         context: context,
-        builder: (context) => _NotesDialog(),
+        builder: (context) => const _PhotoDetailsDialog(),
       );
+      if (details == null) return;
 
       // Upload photo
+      if (!mounted) return;
       final postureProvider = context.read<PostureProvider>();
       final photo = await postureProvider.uploadPhoto(
         imageFile: File(image.path),
         viewAngle: _selectedViewAngle,
-        notes: notes,
+        name: details['name'] ?? 'Posture photo',
+        notes: details['notes'],
       );
 
       if (photo != null && mounted) {
@@ -139,43 +150,77 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
       return;
     }
 
-    // Show photo selection dialog
-    final result = await showDialog<Map<String, String>>(
+    // Show photo selection sheet
+    final result = await showModalBottomSheet<Map<String, PosturePhoto>>(
       context: context,
-      builder: (context) => _ComparePhotosDialog(
+      isScrollControlled: true,
+      builder: (context) => _ComparePhotosSheet(
         photos: postureProvider.photos,
       ),
     );
 
     if (result == null) return;
 
-    final beforeId = result['beforeId']!;
-    final afterId = result['afterId']!;
-    final notes = result['notes'];
+    final beforePhoto = result['beforePhoto']!;
+    final afterPhoto = result['afterPhoto']!;
 
-    final comparison = await postureProvider.comparePhotos(
-      beforePhotoId: beforeId,
-      afterPhotoId: afterId,
-      notes: notes,
-    );
-
-    if (comparison != null && mounted) {
+    if (!mounted) return;
+    if (beforePhoto.id == afterPhoto.id) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Comparison created successfully!'),
+          content: Text('Choose two different photos to compare'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final savedComparison = await postureProvider.comparePhotos(
+      beforePhotoId: beforePhoto.id,
+      afterPhotoId: afterPhoto.id,
+      notes:
+          'Visual comparison: ${_photoTitle(beforePhoto)} and ${_photoTitle(afterPhoto)}',
+    );
+
+    if (!mounted) return;
+
+    final comparison = savedComparison ??
+        PostureComparison(
+          id: 'local-${DateTime.now().millisecondsSinceEpoch}',
+          userId: context.read<AuthProvider>().userId ?? '',
+          beforePhoto: beforePhoto,
+          afterPhoto: afterPhoto,
+          comparisonDate: DateTime.now(),
+          notes: 'Not saved to history',
+        );
+
+    if (savedComparison == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            postureProvider.error ?? 'Could not save comparison history',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Comparison saved'),
           backgroundColor: Colors.green,
         ),
       );
-      _tabController.animateTo(1); // Switch to comparisons tab
+      _tabController.animateTo(1);
     }
+
+    _showComparisonDetail(comparison);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: Column(
-        children: [
+    final content = Column(
+      children: [
+        if (!widget.embedded)
           AppBar(
             title: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,45 +233,71 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
               ],
             ),
           ),
-          TabBar(
+        TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'My Photos', icon: Icon(Icons.photo_library)),
+            Tab(text: 'Comparisons', icon: Icon(Icons.compare)),
+          ],
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.grey,
+        ),
+        Expanded(
+          child: TabBarView(
             controller: _tabController,
-            tabs: const [
-              Tab(text: 'My Photos', icon: Icon(Icons.photo_library)),
-              Tab(text: 'Comparisons', icon: Icon(Icons.compare)),
+            children: [
+              _buildPhotosTab(),
+              _buildComparisonsTab(),
             ],
-            labelColor: Theme.of(context).colorScheme.primary,
-            unselectedLabelColor: Colors.grey,
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildPhotosTab(),
-                _buildComparisonsTab(),
-              ],
-            ),
+        ),
+      ],
+    );
+
+    if (widget.embedded) {
+      return Stack(
+        children: [
+          content,
+          Positioned(
+            left: 16,
+            bottom: 16,
+            child: _buildActionButtons(),
           ),
         ],
-      ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_tabController.index == 0)
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: content,
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButton: _buildActionButtons(),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return AnimatedBuilder(
+      animation: _tabController,
+      builder: (context, _) {
+        if (_tabController.index != 0) return const SizedBox.shrink();
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             FloatingActionButton.extended(
               onPressed: _capturePhoto,
               icon: const Icon(Icons.camera_alt),
               label: const Text('Add Photo'),
               backgroundColor: Theme.of(context).colorScheme.primary,
             ),
-          if (_tabController.index == 0) const SizedBox(height: 8),
-          if (_tabController.index == 0)
+            const SizedBox(height: 8),
             FloatingActionButton(
               onPressed: _comparePhotos,
-              child: const Icon(Icons.compare_arrows),
               backgroundColor: AppTheme.secondary,
+              child: const Icon(Icons.compare_arrows),
             ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -311,15 +382,27 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
               child: ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Image.network(
-                  photo.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.photo, size: 64),
-                    );
-                  },
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      ApiConfig.resolveFileUrl(photo.imageUrl),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.photo, size: 64),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _DeleteIconButton(
+                        onPressed: () => _confirmDeletePhoto(photo),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -344,6 +427,16 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _photoTitle(photo),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -433,6 +526,11 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
+                  IconButton(
+                    tooltip: 'Delete comparison',
+                    onPressed: () => _confirmDeleteComparison(comparison),
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                  ),
                   if (comparison.improvementScore != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -465,7 +563,9 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            comparison.beforePhoto.imageUrl,
+                            ApiConfig.resolveFileUrl(
+                              comparison.beforePhoto.imageUrl,
+                            ),
                             height: 150,
                             width: double.infinity,
                             fit: BoxFit.cover,
@@ -491,7 +591,9 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            comparison.afterPhoto.imageUrl,
+                            ApiConfig.resolveFileUrl(
+                              comparison.afterPhoto.imageUrl,
+                            ),
                             height: 150,
                             width: double.infinity,
                             fit: BoxFit.cover,
@@ -530,7 +632,7 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.network(photo.imageUrl),
+            Image.network(ApiConfig.resolveFileUrl(photo.imageUrl)),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -558,10 +660,143 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
     );
   }
 
+  Future<void> _confirmDeletePhoto(PosturePhoto photo) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove photo?'),
+        content: Text(
+          'This will remove "${_photoTitle(photo)}" and any comparisons that use it.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final provider = context.read<PostureProvider>();
+    final deleted = await provider.deletePhoto(photo.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          deleted ? 'Photo removed' : provider.error ?? 'Failed to remove photo',
+        ),
+        backgroundColor: deleted ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteComparison(PostureComparison comparison) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove comparison?'),
+        content: const Text('This comparison will be removed from your history.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final provider = context.read<PostureProvider>();
+    final deleted = await provider.deleteComparison(comparison.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          deleted
+              ? 'Comparison removed'
+              : provider.error ?? 'Failed to remove comparison',
+        ),
+        backgroundColor: deleted ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
   void _showComparisonDetail(PostureComparison comparison) {
-    // Navigate to a detailed comparison screen or show dialog
-    // Implementation can be expanded
-    _showPhotoDetail(comparison.afterPhoto);
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Posture Comparison',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _ComparisonImagePane(
+                          label: 'Photo 1',
+                          photo: comparison.beforePhoto,
+                          formatDate: _formatDate,
+                          title: _photoTitle(comparison.beforePhoto),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ComparisonImagePane(
+                          label: 'Photo 2',
+                          photo: comparison.afterPhoto,
+                          formatDate: _formatDate,
+                          title: _photoTitle(comparison.afterPhoto),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (comparison.notes != null &&
+                    comparison.notes!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text('Notes: ${comparison.notes}'),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   IconData _getViewAngleIcon(String viewAngle) {
@@ -587,6 +822,12 @@ class _PostureTrackingScreenState extends State<PostureTrackingScreen>
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _photoTitle(PosturePhoto photo) {
+    final name = photo.name?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return '${photo.viewAngle} view';
   }
 }
 
@@ -656,64 +897,93 @@ class _ViewAngleDialogState extends State<_ViewAngleDialog> {
   }
 }
 
-// Notes Dialog
-class _NotesDialog extends StatefulWidget {
-  @override
-  State<_NotesDialog> createState() => _NotesDialogState();
-}
+class _ComparisonImagePane extends StatelessWidget {
+  final String label;
+  final PosturePhoto photo;
+  final String title;
+  final String Function(DateTime date) formatDate;
 
-class _NotesDialogState extends State<_NotesDialog> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  const _ComparisonImagePane({
+    required this.label,
+    required this.photo,
+    required this.title,
+    required this.formatDate,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add Notes (Optional)'),
-      content: TextField(
-        controller: _controller,
-        decoration: const InputDecoration(
-          hintText: 'Enter notes about this photo...',
-          border: OutlineInputBorder(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: AspectRatio(
+            aspectRatio: 0.72,
+            child: Image.network(
+              ApiConfig.resolveFileUrl(photo.imageUrl),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: Colors.grey[300],
+                child: const Icon(Icons.photo, size: 48),
+              ),
+            ),
+          ),
         ),
-        maxLines: 3,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Skip'),
+        const SizedBox(height: 8),
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, _controller.text),
-          child: const Text('Save'),
+        Text(
+          '${photo.viewAngle} - ${formatDate(photo.capturedAt)}',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );
   }
 }
 
-// Compare Photos Dialog
-class _ComparePhotosDialog extends StatefulWidget {
-  final List<PosturePhoto> photos;
+class _DeleteIconButton extends StatelessWidget {
+  final VoidCallback onPressed;
 
-  const _ComparePhotosDialog({required this.photos});
+  const _DeleteIconButton({required this.onPressed});
 
   @override
-  State<_ComparePhotosDialog> createState() => _ComparePhotosDialogState();
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withOpacity(0.55),
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: 'Remove photo',
+        onPressed: onPressed,
+        icon: const Icon(Icons.delete_outline, color: Colors.white, size: 18),
+        constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+        padding: EdgeInsets.zero,
+      ),
+    );
+  }
 }
 
-class _ComparePhotosDialogState extends State<_ComparePhotosDialog> {
-  PosturePhoto? _beforePhoto;
-  PosturePhoto? _afterPhoto;
+// Photo Details Dialog
+class _PhotoDetailsDialog extends StatefulWidget {
+  const _PhotoDetailsDialog();
+
+  @override
+  State<_PhotoDetailsDialog> createState() => _PhotoDetailsDialogState();
+}
+
+class _PhotoDetailsDialogState extends State<_PhotoDetailsDialog> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
   @override
   void dispose() {
+    _nameController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -721,55 +991,30 @@ class _ComparePhotosDialogState extends State<_ComparePhotosDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Compare Photos'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<PosturePhoto>(
-              decoration: const InputDecoration(
-                labelText: 'Before Photo',
-                border: OutlineInputBorder(),
-              ),
-              value: _beforePhoto,
-              items: widget.photos.map((photo) {
-                return DropdownMenuItem(
-                  value: photo,
-                  child: Text(
-                    '${photo.viewAngle} - ${photo.capturedAt.day}/${photo.capturedAt.month}',
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _beforePhoto = value),
+      title: const Text('Photo Details'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Photo name',
+              hintText: 'Example: Week 1 front view',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<PosturePhoto>(
-              decoration: const InputDecoration(
-                labelText: 'After Photo',
-                border: OutlineInputBorder(),
-              ),
-              value: _afterPhoto,
-              items: widget.photos.map((photo) {
-                return DropdownMenuItem(
-                  value: photo,
-                  child: Text(
-                    '${photo.viewAngle} - ${photo.capturedAt.day}/${photo.capturedAt.month}',
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _afterPhoto = value),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _notesController,
+            decoration: const InputDecoration(
+              labelText: 'Notes (optional)',
+              hintText: 'Anything you want to remember...',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes (Optional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
+            maxLines: 3,
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -777,20 +1022,221 @@ class _ComparePhotosDialogState extends State<_ComparePhotosDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _beforePhoto != null && _afterPhoto != null
-              ? () {
-                  Navigator.pop(context, {
-                    'beforeId': _beforePhoto!.id,
-                    'afterId': _afterPhoto!.id,
-                    'notes': _notesController.text.isEmpty
-                        ? null
-                        : _notesController.text,
-                  });
-                }
-              : null,
-          child: const Text('Compare'),
+          onPressed: () {
+            final name = _nameController.text.trim();
+            Navigator.pop(context, {
+              'name': name.isEmpty ? 'Posture photo' : name,
+              'notes': _notesController.text.trim().isEmpty
+                  ? null
+                  : _notesController.text.trim(),
+            });
+          },
+          child: const Text('Save'),
         ),
       ],
+    );
+  }
+}
+
+class _ComparePhotosSheet extends StatefulWidget {
+  final List<PosturePhoto> photos;
+
+  const _ComparePhotosSheet({required this.photos});
+
+  @override
+  State<_ComparePhotosSheet> createState() => _ComparePhotosSheetState();
+}
+
+class _ComparePhotosSheetState extends State<_ComparePhotosSheet> {
+  PosturePhoto? _firstPhoto;
+  PosturePhoto? _secondPhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          12,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Choose two photos',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Select the two posture photos you want to view side by side.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: widget.photos.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final photo = widget.photos[index];
+                  final selectedAsFirst = _firstPhoto?.id == photo.id;
+                  final selectedAsSecond = _secondPhoto?.id == photo.id;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        ApiConfig.resolveFileUrl(photo.imageUrl),
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 56,
+                          height: 56,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.photo),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      _photoTitle(photo),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${photo.viewAngle} - ${photo.capturedAt.day}/${photo.capturedAt.month}/${photo.capturedAt.year}',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _SelectionPill(
+                          label: '1',
+                          selected: selectedAsFirst,
+                          onTap: () => setState(() {
+                            _firstPhoto = photo;
+                            if (_secondPhoto?.id == photo.id) {
+                              _secondPhoto = null;
+                            }
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        _SelectionPill(
+                          label: '2',
+                          selected: selectedAsSecond,
+                          onTap: () => setState(() {
+                            _secondPhoto = photo;
+                            if (_firstPhoto?.id == photo.id) {
+                              _firstPhoto = null;
+                            }
+                          }),
+                        ),
+                      ],
+                    ),
+                    onTap: () => setState(() {
+                      if (_firstPhoto == null && _secondPhoto?.id != photo.id) {
+                        _firstPhoto = photo;
+                      } else if (_secondPhoto == null &&
+                          _firstPhoto?.id != photo.id) {
+                        _secondPhoto = photo;
+                      } else if (_firstPhoto?.id == photo.id) {
+                        _firstPhoto = null;
+                      } else if (_secondPhoto?.id == photo.id) {
+                        _secondPhoto = null;
+                      }
+                    }),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _firstPhoto != null && _secondPhoto != null
+                        ? () => Navigator.pop(context, {
+                              'beforePhoto': _firstPhoto!,
+                              'afterPhoto': _secondPhoto!,
+                            })
+                        : null,
+                    icon: const Icon(Icons.compare_arrows),
+                    label: const Text('Compare'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _photoTitle(PosturePhoto photo) {
+    final name = photo.name?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return '${photo.viewAngle} view';
+  }
+}
+
+class _SelectionPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SelectionPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? theme.colorScheme.primary : Colors.transparent,
+          shape: BoxShape.circle,
+          border: Border.all(color: theme.colorScheme.primary),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : theme.colorScheme.primary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
     );
   }
 }

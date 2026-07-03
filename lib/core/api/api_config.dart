@@ -12,6 +12,17 @@ class ApiConfig {
   static String get baseUrl =>
       _apiBaseUrlOverride.isNotEmpty ? _apiBaseUrlOverride : _defaultBaseUrl();
 
+  static String resolveFileUrl(String pathOrUrl) {
+    if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+      return pathOrUrl;
+    }
+
+    final normalized = pathOrUrl.startsWith('/')
+        ? pathOrUrl
+        : '/${pathOrUrl.replaceAll('\\', '/')}';
+    return '$baseUrl$normalized';
+  }
+
   static String _defaultBaseUrl() {
     if (kIsWeb) {
       return 'http://localhost:8081';
@@ -77,6 +88,7 @@ class ApiConfig {
   // ══════════════════════════════════════════════════════════════════════════
   static const String consentAccept = '/consent/accept';
   static const String consentWithdraw = '/consent/withdraw';
+  static const String consentMy = '/consent/my';
   static const String medicalDisclaimer = '/medical-disclaimer';
   static const String legalDisclaimer = '/legal/disclaimer';
   static const String legalTerms = '/legal/terms';
@@ -139,6 +151,10 @@ class ApiConfig {
   static String postureByUserId(String userId) => '/posture/$userId'; // GET
   static String postureComparisons(String userId) =>
       '/posture/$userId/comparisons'; // GET
+  static String postureDeletePhoto(String photoId) =>
+      '/posture/photos/$photoId'; // DELETE
+  static String postureDeleteComparison(String comparisonId) =>
+      '/posture/comparisons/$comparisonId'; // DELETE
 
   // ══════════════════════════════════════════════════════════════════════════
   // Imaging Module (NOTE: Uses /api/v1 prefix!)

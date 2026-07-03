@@ -60,6 +60,19 @@ class _ScoliometerScreenState extends State<ScoliometerScreen>
               scolio.consumeCaptureNotice();
             });
           }
+          final saveError = scolio.saveError;
+          if (saveError != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(saveError),
+                  backgroundColor: AppTheme.destructive,
+                ),
+              );
+              scolio.consumeSaveError();
+            });
+          }
 
           return OrientationBuilder(
             builder: (context, orientation) {

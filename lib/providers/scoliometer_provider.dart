@@ -100,9 +100,9 @@ class ScoliometerProvider extends ChangeNotifier {
   static const double _baseMaxStepPerSample = 0.70;
   static const double _boostedMaxStepPerSample = 1.40;
   static const double _boostThreshold = 2.0;
-  static const double _stableBand = 0.8;
-  static const double _minAutoCaptureAngle = 0.2;
-  static const Duration _requiredStableDuration = Duration(milliseconds: 1500);
+  static const double _stableBand = 1.0;
+  static const double _minAutoCaptureAngle = 0.0;
+  static const Duration _requiredStableDuration = Duration(milliseconds: 1000);
 
   // ── Orientation guard thresholds ─────────────────────────────────────────
   // Pitch (forward/back tilt of the device) must stay within ±12° of the
@@ -160,6 +160,10 @@ class ScoliometerProvider extends ChangeNotifier {
 
   void consumeCaptureNotice() {
     _captureNotice = null;
+  }
+
+  void consumeSaveError() {
+    _saveError = null;
   }
 
   void setRegion(String region) {
@@ -312,8 +316,7 @@ class ScoliometerProvider extends ChangeNotifier {
     try {
       _sensorSubscription = accelerometerEventStream().listen(
         (AccelerometerEvent event) {
-          final orientationOk =
-              _updateOrientationGuard(event.x, event.y, event.z);
+          _updateOrientationGuard(event.x, event.y, event.z);
 
           // Still update the live reading so the user can see the number, but
           // mark orientation warnings so the UI can show the alert.
@@ -327,14 +330,10 @@ class ScoliometerProvider extends ChangeNotifier {
 
           _updateVariance(_currentAngle);
 
-          // Only attempt auto-capture when orientation is valid.
-          if (orientationOk) {
-            _checkAndAutoCapture(_currentAngle);
-          } else {
-            _stableSince = null;
-            _stableReferenceAngle = null;
-            _stabilityProgress = 0.0;
-          }
+          // Auto-capture is based on signal stability. Orientation warnings are
+          // still shown to guide placement, but they should not prevent saving
+          // when the phone is held still enough for a usable ATR snapshot.
+          _checkAndAutoCapture(_currentAngle);
 
           notifyListeners();
         },
@@ -437,15 +436,16 @@ class ScoliometerProvider extends ChangeNotifier {
   ATRClassification getClassification(double angle) {
     final absAngle = angle.abs();
     if (absAngle <= 5) {
-      return ATRClassification('Normal', 'No significant asymmetry detected');
+      return const ATRClassification(
+          'Normal', 'No significant asymmetry detected');
     } else if (absAngle <= 7) {
-      return ATRClassification(
+      return const ATRClassification(
           'Borderline', 'Minor asymmetry — consider monitoring');
     } else if (absAngle <= 10) {
-      return ATRClassification(
+      return const ATRClassification(
           'Positive screen', 'Referral to specialist recommended (ATR ≥ 7°)');
     } else {
-      return ATRClassification(
+      return const ATRClassification(
           'Significant', 'Professional evaluation strongly recommended');
     }
   }

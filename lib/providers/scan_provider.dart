@@ -3,12 +3,14 @@ import 'dart:io';
 import '../models/scan_record.dart';
 import '../core/api/api_client.dart';
 import '../core/services/imaging_service.dart';
+import '../core/services/tracking_service.dart';
 import '../core/models/imaging/image_asset.dart';
 import '../core/models/imaging/ai_analysis.dart';
 import '../core/api/api_exception.dart';
 
 class ScanProvider extends ChangeNotifier {
   final ImagingService _imagingService = ImagingService(ApiClient());
+  final TrackingService _trackingService = TrackingService(ApiClient());
 
   final List<ScanRecord> _scans = [];
   final List<AtrRecord> _atrRecords = [];
@@ -157,6 +159,38 @@ class ScanProvider extends ChangeNotifier {
       _errorMessage = e.message;
     } catch (e) {
       _errorMessage = 'Failed to load history';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadAtrHistory(String userId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final readings = await _trackingService.getScoliometerHistory(userId);
+      _atrRecords
+        ..clear()
+        ..addAll(
+          readings.asMap().entries.map((entry) {
+            final reading = entry.value;
+            final value = reading.readingValue.abs();
+            final notes = reading.bodyPositionNotes?.toLowerCase() ?? '';
+            return AtrRecord(
+              id: entry.key + 1,
+              date: reading.capturedAt,
+              thoracic: notes.contains('lumbar') ? 0 : value,
+              lumbar: notes.contains('lumbar') ? value : 0,
+            );
+          }),
+        );
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Failed to load ATR history';
     } finally {
       _isLoading = false;
       notifyListeners();

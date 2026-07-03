@@ -77,6 +77,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
           return Column(
             children: [
+              _AiDisclaimerBanner(theme: theme),
+
               // Messages
               Expanded(
                 child: chat.messages.isEmpty
@@ -434,6 +436,48 @@ class _MessageBubble extends StatelessWidget {
                   child: Text('👤', style: TextStyle(fontSize: 14))),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AiDisclaimerBanner extends StatelessWidget {
+  final ThemeData theme;
+
+  const _AiDisclaimerBanner({required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.18),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 18,
+            color: theme.colorScheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'AI responses can be inaccurate and are not medical advice. For diagnosis, treatment decisions, or urgent symptoms, consult a healthcare professional.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );

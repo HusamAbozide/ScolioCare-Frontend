@@ -8,6 +8,7 @@ import '../core/models/tracking/progress_tracking.dart';
 import '../core/services/exercise_service.dart';
 import '../core/services/tracking_service.dart';
 import '../providers/auth_provider.dart';
+import '../screens/posture_tracking_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/mobile_layout.dart';
 
@@ -21,17 +22,32 @@ class ProgressTrackingScreen extends StatefulWidget {
 class _ProgressTrackingScreenState extends State<ProgressTrackingScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _handledInitialTab = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_handledInitialTab) return;
+    _handledInitialTab = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      final tabIndex = args['tabIndex'];
+      if (tabIndex is int && tabIndex >= 0 && tabIndex < _tabController.length) {
+        _tabController.index = tabIndex;
+      }
+    }
   }
 
   @override
@@ -46,10 +62,12 @@ class _ProgressTrackingScreenState extends State<ProgressTrackingScreen>
             pinned: true,
             bottom: TabBar(
               controller: _tabController,
+              isScrollable: true,
               tabs: const [
                 Tab(text: 'ATR History'),
                 Tab(text: 'Exercises'),
                 Tab(text: 'Pain'),
+                Tab(text: 'Posture'),
               ],
             ),
           ),
@@ -60,6 +78,7 @@ class _ProgressTrackingScreenState extends State<ProgressTrackingScreen>
             _AtrTab(),
             _ExerciseTab(),
             _PainTab(),
+            PostureTrackingScreen(embedded: true),
           ],
         ),
       ),
@@ -137,7 +156,8 @@ class _AtrTabState extends State<_AtrTab> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child:
-                  Text(_error!, style: TextStyle(color: AppTheme.destructive)),
+                  Text(_error!,
+                      style: const TextStyle(color: AppTheme.destructive)),
             ),
           if (_loading) ...[
             const LinearProgressIndicator(),
@@ -331,7 +351,8 @@ class _ExerciseTabState extends State<_ExerciseTab> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child:
-                  Text(_error!, style: TextStyle(color: AppTheme.destructive)),
+                  Text(_error!,
+                      style: const TextStyle(color: AppTheme.destructive)),
             ),
           if (_loading) ...[
             const LinearProgressIndicator(),
@@ -562,7 +583,8 @@ class _PainTabState extends State<_PainTab> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child:
-                  Text(_error!, style: TextStyle(color: AppTheme.destructive)),
+                  Text(_error!,
+                      style: const TextStyle(color: AppTheme.destructive)),
             ),
           if (_loading) ...[
             const LinearProgressIndicator(),
