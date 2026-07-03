@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import '../api/api_client.dart';
 import '../api/api_config.dart';
 import '../../models/posture_photo.dart';
@@ -16,10 +17,30 @@ class PostureService {
     required String viewAngle,
     String? notes,
   }) async {
-    // For now, this would need backend implementation
-    // In a real scenario, you'd use multipart/form-data upload
-    throw UnimplementedError(
-        'Multipart upload requires additional ApiClient support');
+    try {
+      final fileName = imageFile.path.split(Platform.pathSeparator).last;
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(imageFile.path, filename: fileName),
+        if (notes != null && notes.trim().isNotEmpty)
+          'notes': '${viewAngle.trim().toUpperCase()}|${notes.trim()}'
+        else
+          'notes': viewAngle.trim().toUpperCase(),
+      });
+
+      final response = await _apiClient.postMultipart<PosturePhoto>(
+        ApiConfig.postureUpload,
+        formData: formData,
+        fromJsonT: (json) => PosturePhoto.fromJson(json as Map<String, dynamic>),
+      );
+
+      if (response.success && response.data != null) {
+        return response.data!;
+      }
+
+      throw Exception(response.message ?? 'Failed to upload posture photo');
+    } catch (e) {
+      throw Exception('Error uploading posture photo: $e');
+    }
   }
 
   /// Get all posture photos for a user
@@ -52,8 +73,8 @@ class PostureService {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiConfig.postureCompare,
         data: {
-          'beforePhotoId': beforePhotoId,
-          'afterPhotoId': afterPhotoId,
+          'photoBeforeId': beforePhotoId,
+          'photoAfterId': afterPhotoId,
           if (notes != null) 'notes': notes,
         },
         fromJsonT: (json) => json as Map<String, dynamic>,

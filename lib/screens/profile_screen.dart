@@ -40,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              Navigator.pushNamed(context, '/profile-setup');
+              Navigator.pushNamed(context, '/edit-profile');
             },
           ),
         ],
@@ -215,8 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 title: const Text('Edit Profile'),
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: () {
-                                  Navigator.pushNamed(
-                                      context, '/profile-setup');
+                                  Navigator.pushNamed(context, '/edit-profile');
                                 },
                               ),
                               const Divider(height: 1),
@@ -225,14 +224,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     color: theme.colorScheme.primary),
                                 title: const Text('Change Password'),
                                 trailing: const Icon(Icons.chevron_right),
-                                onTap: () {
-                                  // TODO: Implement change password
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Coming soon!'),
-                                    ),
-                                  );
-                                },
+                                onTap: () =>
+                                    Navigator.pushNamed(context, '/change-password'),
                               ),
                               const Divider(height: 1),
                               ListTile(

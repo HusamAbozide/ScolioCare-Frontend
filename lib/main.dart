@@ -34,6 +34,7 @@ import 'screens/chatbot_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/edit_profile_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/not_found_screen.dart';
 import 'screens/rewards_catalog_screen.dart';
@@ -43,6 +44,7 @@ import 'screens/medical_disclaimer_screen.dart';
 import 'screens/consent_management_screen.dart';
 import 'screens/posture_tracking_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'screens/reset_password_screen.dart';
 import 'screens/otp_verification_screen.dart';
 import 'screens/account_deletion_screen.dart';
 
@@ -146,15 +148,21 @@ class ScolioCareApp extends StatelessWidget {
               '/reports': (_) => const ReportsScreen(),
               '/settings': (_) => const SettingsScreen(),
               '/profile': (_) => const ProfileScreen(),
+              '/edit-profile': (_) => const EditProfileScreen(),
               '/notifications': (_) => const NotificationsScreen(),
               '/rewards': (_) => const RewardsCatalogScreen(),
               '/terms': (_) => const TermsScreen(),
               '/privacy': (_) => const PrivacyScreen(),
+              '/settings/privacy': (_) => const PrivacyScreen(),
               '/medical-disclaimer': (_) => const MedicalDisclaimerScreen(),
               '/consent-management': (_) => const ConsentManagementScreen(),
               '/posture-tracking': (_) => const PostureTrackingScreen(),
               '/change-password': (_) => const ChangePasswordScreen(),
               '/account-deletion': (_) => const AccountDeletionScreen(),
+              '/medical-history': (_) => const ProfileScreen(),
+              '/achievements': (_) => const RewardsCatalogScreen(),
+              '/settings/appearance': (_) => const SettingsScreen(),
+              '/settings/help': (_) => const MedicalDisclaimerScreen(),
             },
             onGenerateRoute: (settings) {
               // Handle OTP verification route with parameters
@@ -164,6 +172,14 @@ class ScolioCareApp extends StatelessWidget {
                   builder: (_) => OtpVerificationScreen(
                     email: args?['email'] ?? '',
                     purpose: args?['purpose'],
+                  ),
+                );
+              }
+              if (settings.name == '/reset-password') {
+                final args = settings.arguments as Map<String, dynamic>?;
+                return MaterialPageRoute(
+                  builder: (_) => ResetPasswordScreen(
+                    email: args?['email'] ?? '',
                   ),
                 );
               }

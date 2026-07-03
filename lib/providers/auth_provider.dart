@@ -59,6 +59,37 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> resetPassword({
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _authService.resetPassword(
+        newPassword: newPassword,
+      );
+
+      if (!success) {
+        _errorMessage = 'Failed to reset password';
+      }
+
+      _isLoggedIn = false;
+      _currentUser = null;
+      return success;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } catch (e) {
+      _errorMessage = 'An unexpected error occurred';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> sendOtp({
     required String email,
     required String purpose,
@@ -172,6 +203,16 @@ class AuthProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> hasCompletedInitialAssessment() async {
+    try {
+      final profile = await _profileService.getProfile();
+      final assessment = profile.initialAssessment;
+      return assessment != null && assessment.isNotEmpty;
+    } catch (_) {
+      return false;
     }
   }
 

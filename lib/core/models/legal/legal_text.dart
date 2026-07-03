@@ -10,10 +10,13 @@ class LegalText {
   });
 
   factory LegalText.fromJson(Map<String, dynamic> json) {
+    final effectiveDate = json['effectiveDate'] ?? json['updatedAt'];
     return LegalText(
-      content: json['content'] as String,
-      version: json['version'] as String,
-      effectiveDate: DateTime.parse(json['effectiveDate'] as String),
+      content: json['content'] as String? ?? '',
+      version: json['version'] as String? ?? '1.0',
+      effectiveDate: effectiveDate != null
+          ? DateTime.tryParse(effectiveDate.toString()) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 
@@ -43,10 +46,13 @@ class MedicalDisclaimer {
 
   factory MedicalDisclaimer.fromJson(Map<String, dynamic> json) {
     return MedicalDisclaimer(
-      disclaimerId: json['disclaimerId'] as String,
-      content: json['content'] as String,
-      version: json['version'] as String,
-      effectiveDate: DateTime.parse(json['effectiveDate'] as String),
+      disclaimerId: json['disclaimerId']?.toString() ?? '',
+      content: json['content'] as String? ?? '',
+      version: json['version'] as String? ?? '1.0',
+      effectiveDate: json['effectiveDate'] != null
+          ? DateTime.tryParse(json['effectiveDate'].toString()) ??
+              DateTime.now()
+          : DateTime.now(),
       isActive: json['isActive'] as bool? ?? true,
     );
   }

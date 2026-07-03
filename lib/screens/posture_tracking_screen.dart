@@ -5,8 +5,6 @@ import 'package:provider/provider.dart';
 import '../providers/posture_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/posture_photo.dart';
-import '../widgets/app_header.dart';
-import '../widgets/shimmer_loading.dart';
 import '../theme/app_theme.dart';
 
 class PostureTrackingScreen extends StatefulWidget {

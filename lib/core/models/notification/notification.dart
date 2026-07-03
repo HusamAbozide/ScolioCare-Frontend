@@ -28,22 +28,26 @@ class AppNotification {
   });
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
+    final type = json['type'] ?? json['category'];
+    final message = json['message'] ?? json['body'];
+    final sentAt = json['sentAt'] ?? json['createdAt'];
+    final readAt = json['readAt'];
     return AppNotification(
-      notificationId: json['notificationId'] as String,
-      userId: json['userId'] as String,
-      type: json['type'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
-      channel: json['channel'] as String,
-      priority: json['priority'] as String,
-      status: json['status'] as String,
+      notificationId: json['notificationId']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
+      type: type?.toString() ?? 'GENERAL',
+      title: json['title'] as String? ?? 'Notification',
+      message: message?.toString() ?? '',
+      channel: json['channel']?.toString() ?? 'PUSH',
+      priority: json['priority']?.toString() ?? 'NORMAL',
+      status: json['status']?.toString() ?? 'SENT',
       scheduledFor: json['scheduledFor'] != null
           ? DateTime.parse(json['scheduledFor'] as String)
           : null,
-      sentAt: json['sentAt'] != null
-          ? DateTime.parse(json['sentAt'] as String)
+      sentAt: sentAt != null
+          ? DateTime.tryParse(sentAt.toString())
           : null,
-      isRead: json['isRead'] as bool? ?? false,
+      isRead: json['isRead'] as bool? ?? readAt != null,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }

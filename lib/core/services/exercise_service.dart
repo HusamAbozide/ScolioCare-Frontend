@@ -113,13 +113,13 @@ class ExerciseService {
   }
 
   Future<UserExercisePlan> generatePlan({
-    required String analysisId,
+    String? analysisId,
     Map<String, dynamic>? assessmentAnswers,
   }) async {
     final response = await _apiClient.post<UserExercisePlan>(
       ApiConfig.planGenerate,
       data: {
-        'analysisId': analysisId,
+        if (analysisId != null) 'analysisId': analysisId,
         if (assessmentAnswers != null) 'assessmentAnswers': assessmentAnswers,
       },
       fromJsonT: (json) =>
@@ -178,6 +178,23 @@ class ExerciseService {
     }
 
     throw Exception(response.message ?? 'Failed to submit log');
+  }
+
+  Future<void> deleteTodayExerciseLog({
+    required String planId,
+    required String exerciseId,
+  }) async {
+    final response = await _apiClient.delete(
+      ApiConfig.exerciseLogToday,
+      queryParameters: {
+        'planId': planId,
+        'exerciseId': exerciseId,
+      },
+    );
+
+    if (!response.success) {
+      throw Exception(response.message ?? 'Failed to undo exercise log');
+    }
   }
 
   Future<List<ExerciseLog>> getExerciseLogs(

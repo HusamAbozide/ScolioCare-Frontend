@@ -1,13 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../providers/report_provider.dart';
+import '../providers/scan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chat_fab.dart';
 
-class ReportsScreen extends StatelessWidget {
+class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
+
+  @override
+  State<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends State<ReportsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ReportProvider>().loadReports();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final reports = context.watch<ReportProvider>();
+    final currentAnalysis = context.watch<ScanProvider>().currentAnalysis;
+    final latestReport =
+        reports.reports.isNotEmpty ? reports.reports.first : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +65,9 @@ class ReportsScreen extends StatelessWidget {
                             ?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(
-                      'Generated on ${_formatDate(DateTime.now())}',
+                      latestReport != null
+                          ? 'Generated on ${_formatDate(latestReport.generatedAt)}'
+                          : 'Generate a report from your latest analysis',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -92,24 +115,38 @@ class ReportsScreen extends StatelessWidget {
 
             // Actions
             FilledButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Report downloaded successfully!'),
-                    backgroundColor: AppTheme.success,
-                  ),
-                );
-              },
-              icon: const Icon(Icons.download),
-              label: const Text('Download PDF'),
+              onPressed: reports.isGenerating || reports.isLoading
+                  ? null
+                  : () => _generateOrDownloadReport(
+                        context,
+                        currentAnalysis?.analysisId,
+                        latestReport?.reportId,
+                      ),
+              icon: Icon(
+                currentAnalysis?.analysisId != null
+                    ? Icons.picture_as_pdf
+                    : latestReport == null
+                        ? Icons.picture_as_pdf
+                        : Icons.download,
+              ),
+              label: Text(
+                reports.isGenerating
+                    ? 'Generating...'
+                    : currentAnalysis?.analysisId != null
+                        ? 'Generate Fresh PDF'
+                        : latestReport == null
+                            ? 'Generate PDF'
+                            : 'Download PDF',
+              ),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Share dialog opened')),
-                );
-              },
+              onPressed: latestReport?.reportId == null
+                  ? null
+                  : () => _downloadAndShareReport(
+                        context,
+                        latestReport!.reportId,
+                      ),
               icon: const Icon(Icons.share),
               label: const Text('Share Report'),
               style: OutlinedButton.styleFrom(
@@ -237,6 +274,139 @@ class ReportsScreen extends StatelessWidget {
       'Dec'
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  Future<void> _generateOrDownloadReport(
+    BuildContext context,
+    String? analysisId,
+    String? reportId,
+  ) async {
+    final provider = context.read<ReportProvider>();
+    String? targetReportId = reportId;
+
+    if (analysisId != null) {
+      final report = await provider.generateReport(analysisId);
+      if (!context.mounted || report == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(provider.error ?? 'Failed to generate report')),
+        );
+        return;
+      }
+      targetReportId = report.reportId;
+    }
+
+    if (targetReportId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No completed analysis is available yet.')),
+      );
+      return;
+    }
+
+    final path = await provider.downloadReport(targetReportId);
+    if (!context.mounted) return;
+    if (path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Failed to download report'),
+          backgroundColor: AppTheme.destructive,
+        ),
+      );
+      return;
+    }
+
+    await _showReportReadySheet(context, path);
+  }
+
+  Future<void> _downloadAndShareReport(
+    BuildContext context,
+    String reportId,
+  ) async {
+    final provider = context.read<ReportProvider>();
+    final path = await provider.downloadReport(reportId);
+    if (!context.mounted) return;
+    if (path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.error ?? 'Failed to download report'),
+          backgroundColor: AppTheme.destructive,
+        ),
+      );
+      return;
+    }
+    await _shareReport(path);
+  }
+
+  Future<void> _showReportReadySheet(BuildContext context, String path) async {
+    final theme = Theme.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Icon(Icons.picture_as_pdf, color: theme.colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Report is ready',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Open it with a PDF viewer or share it with your doctor.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _shareReport(path);
+                },
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Open or Share PDF'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _shareReport(String path) async {
+    await Share.shareXFiles(
+      [XFile(path, mimeType: 'application/pdf')],
+      subject: 'ScolioCare Report',
+      text: 'ScolioCare medical report PDF',
+    );
   }
 }
 

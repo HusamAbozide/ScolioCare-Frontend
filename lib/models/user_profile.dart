@@ -1,6 +1,8 @@
 class UserProfile {
   final String name;
   final String email;
+  final String? firstName;
+  final String? lastName;
   final int? age;
   final String? gender;
   final double? heightCm;
@@ -17,6 +19,8 @@ class UserProfile {
   const UserProfile({
     required this.name,
     required this.email,
+    this.firstName,
+    this.lastName,
     this.age,
     this.gender,
     this.heightCm,
@@ -34,6 +38,8 @@ class UserProfile {
   UserProfile copyWith({
     String? name,
     String? email,
+    String? firstName,
+    String? lastName,
     int? age,
     String? gender,
     double? heightCm,
@@ -50,6 +56,8 @@ class UserProfile {
     return UserProfile(
       name: name ?? this.name,
       email: email ?? this.email,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
       age: age ?? this.age,
       gender: gender ?? this.gender,
       heightCm: heightCm ?? this.heightCm,
@@ -68,6 +76,8 @@ class UserProfile {
   Map<String, dynamic> toJson() => {
         'name': name,
         'email': email,
+        'firstName': firstName,
+        'lastName': lastName,
         'age': age,
         'gender': gender,
         'heightCm': heightCm,

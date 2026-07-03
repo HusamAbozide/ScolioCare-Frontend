@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import '../core/api/api_client.dart';
+import '../core/services/tracking_service.dart';
 
 // ---------------------------------------------------------------------------
 // Orientation guard — alerts when the device is tilted out of the valid
@@ -60,6 +62,8 @@ class ExamSession {
 // Main provider
 // ---------------------------------------------------------------------------
 class ScoliometerProvider extends ChangeNotifier {
+  final TrackingService _trackingService = TrackingService(ApiClient());
+
   double _currentAngle = 0;
   bool _isMeasuring = false;
   bool _calibrated = false;
@@ -74,6 +78,7 @@ class ScoliometerProvider extends ChangeNotifier {
   String _selectedSide = 'left'; // 'left' | 'right'
   String? _sensorError;
   String? _captureNotice;
+  String? _saveError;
   OrientationStatus _orientationStatus = OrientationStatus.ok;
   double _pitchAngle = 0; // live pitch for the orientation guard
   double _signalVariance = 0; // rolling variance used for confidence score
@@ -95,9 +100,9 @@ class ScoliometerProvider extends ChangeNotifier {
   static const double _baseMaxStepPerSample = 0.70;
   static const double _boostedMaxStepPerSample = 1.40;
   static const double _boostThreshold = 2.0;
-  static const double _stableBand = 0.35;
-  static const double _minAutoCaptureAngle = 1.0;
-  static const Duration _requiredStableDuration = Duration(milliseconds: 2000);
+  static const double _stableBand = 0.8;
+  static const double _minAutoCaptureAngle = 0.2;
+  static const Duration _requiredStableDuration = Duration(milliseconds: 1500);
 
   // ── Orientation guard thresholds ─────────────────────────────────────────
   // Pitch (forward/back tilt of the device) must stay within ±12° of the
@@ -125,6 +130,7 @@ class ScoliometerProvider extends ChangeNotifier {
   String get selectedSide => _selectedSide;
   String? get sensorError => _sensorError;
   String? get captureNotice => _captureNotice;
+  String? get saveError => _saveError;
   OrientationStatus get orientationStatus => _orientationStatus;
   double get pitchAngle => _pitchAngle;
   double get signalVariance => _signalVariance;
@@ -259,6 +265,7 @@ class ScoliometerProvider extends ChangeNotifier {
     if (_stableReferenceAngle == null || _stableSince == null) {
       _stableReferenceAngle = angle;
       _stableSince = now;
+      _stabilityProgress = 0.05;
       return false;
     }
 
@@ -384,6 +391,7 @@ class ScoliometerProvider extends ChangeNotifier {
     );
 
     _savedMeasurements.insert(0, record);
+    unawaited(_persistReading(record));
 
     // If an exam session is active, slot the reading into the bilateral map.
     if (_currentSession != null) {
@@ -407,6 +415,21 @@ class ScoliometerProvider extends ChangeNotifier {
   void saveMeasurement() {
     _saveCurrentReading(auto: false);
     notifyListeners();
+  }
+
+  Future<void> _persistReading(MeasurementRecord record) async {
+    try {
+      _saveError = null;
+      await _trackingService.recordScoliometer(
+        readingValue: record.angle.abs(),
+        side: record.side.toUpperCase(),
+        notes:
+            '${record.region} ${record.autoCapture ? "auto" : "manual"} capture; confidence=${record.confidence.name}; uncertainty=±${record.uncertaintyRange.toStringAsFixed(1)}°',
+      );
+    } catch (e) {
+      _saveError = 'Saved locally, but backend sync failed: $e';
+      notifyListeners();
+    }
   }
 
   // ── Classification ───────────────────────────────────────────────────────

@@ -19,6 +19,88 @@ class _LoginScreenState extends State<LoginScreen> {
   final _lastNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  void _showComingSoon(String provider) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$provider sign-in is coming soon.'),
+      ),
+    );
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController(text: _emailController.text);
+    final formKey = GlobalKey<FormState>();
+
+    final email = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              prefixIcon: Icon(Icons.mail_outline),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Email is required';
+              }
+              if (!value.contains('@')) {
+                return 'Enter a valid email';
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(dialogContext, emailController.text.trim());
+              }
+            },
+            child: const Text('Send OTP'),
+          ),
+        ],
+      ),
+    );
+
+    emailController.dispose();
+    if (email == null || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    final sent = await auth.sendOtp(email: email, purpose: 'PASSWORD_RESET');
+    if (!mounted) return;
+
+    if (sent) {
+      Navigator.pushNamed(
+        context,
+        '/otp-verification',
+        arguments: {
+          'email': email,
+          'purpose': 'PASSWORD_RESET',
+        },
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(auth.error ?? 'Failed to send OTP'),
+          backgroundColor: themeColorError(context),
+        ),
+      );
+    }
+  }
+
+  Color themeColorError(BuildContext context) =>
+      Theme.of(context).colorScheme.error;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -45,7 +127,13 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else if (auth.isLoggedIn) {
-          Navigator.pushReplacementNamed(context, '/profile-setup');
+          final completedAssessment =
+              await auth.hasCompletedInitialAssessment();
+          if (!mounted) return;
+          Navigator.pushReplacementNamed(
+            context,
+            completedAssessment ? '/dashboard' : '/profile-setup',
+          );
         }
       }
     } else {
@@ -224,7 +312,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
-                                onPressed: () {},
+                                onPressed: auth.isLoading
+                                    ? null
+                                    : _showForgotPasswordDialog,
                                 child: const Text('Forgot Password?'),
                               ),
                             ),
@@ -326,7 +416,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () {},
+                                  onPressed: () => _showComingSoon('Google'),
                                   icon:
                                       const Icon(Icons.g_mobiledata, size: 24),
                                   label: const Text('Google'),
@@ -341,7 +431,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () {},
+                                  onPressed: () => _showComingSoon('Apple'),
                                   icon: const Icon(Icons.apple, size: 24),
                                   label: const Text('Apple'),
                                   style: OutlinedButton.styleFrom(

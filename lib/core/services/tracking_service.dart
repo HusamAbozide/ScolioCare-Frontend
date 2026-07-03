@@ -9,41 +9,6 @@ class TrackingService {
 
   TrackingService(this._apiClient);
 
-  Future<ProgressTracking> createProgress({
-    String? planId,
-    required DateTime date,
-  }) async {
-    // Mock mode
-    if (ApiConfig.useMockMode) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      return ProgressTracking(
-        progressId: 'mock-progress-${DateTime.now().millisecondsSinceEpoch}',
-        userId: 'mock-user-123',
-        planId: planId,
-        trackingDate: date,
-        overallProgressPercentage: 75.0,
-        source: 'MANUAL',
-        createdAt: DateTime.now(),
-      );
-    }
-
-    final response = await _apiClient.post<ProgressTracking>(
-      ApiConfig.progressCreate,
-      data: {
-        'planId': planId,
-        'trackingDate': date.toIso8601String(),
-      },
-      fromJsonT: (json) =>
-          ProgressTracking.fromJson(json as Map<String, dynamic>),
-    );
-
-    if (response.success && response.data != null) {
-      return response.data!;
-    }
-
-    throw Exception(response.message ?? 'Failed to create progress');
-  }
-
   Future<PainLevelTracking> recordPain({
     required String progressId,
     required int painLevel,
@@ -65,14 +30,11 @@ class TrackingService {
 
     final response = await _apiClient.post<PainLevelTracking>(
       ApiConfig.painRecord,
-      data: PainLevelTracking(
-        painTrackingId: '',
-        progressId: progressId,
-        painLevel: painLevel,
-        painLocation: location,
-        painDescription: description,
-        recordedAt: DateTime.now(),
-      ).toJson(),
+      data: {
+        'painLevel': painLevel,
+        'area': location,
+        'notes': description,
+      },
       fromJsonT: (json) =>
           PainLevelTracking.fromJson(json as Map<String, dynamic>),
     );
@@ -85,8 +47,9 @@ class TrackingService {
   }
 
   Future<ScoliometerReading> recordScoliometer({
-    required String progressId,
+    String? progressId,
     required double readingValue,
+    String? side,
     String? notes,
   }) async {
     // Mock mode
@@ -94,7 +57,7 @@ class TrackingService {
       await Future.delayed(const Duration(milliseconds: 500));
       return ScoliometerReading(
         readingId: 'mock-scolio-${DateTime.now().millisecondsSinceEpoch}',
-        progressId: progressId,
+        progressId: progressId ?? 'mock-progress',
         readingValue: readingValue,
         unit: 'degrees',
         bodyPositionNotes: notes,
@@ -104,14 +67,11 @@ class TrackingService {
 
     final response = await _apiClient.post<ScoliometerReading>(
       ApiConfig.scoliometerRecord,
-      data: ScoliometerReading(
-        readingId: '',
-        progressId: progressId,
-        readingValue: readingValue,
-        unit: 'degrees',
-        bodyPositionNotes: notes,
-        capturedAt: DateTime.now(),
-      ).toJson(),
+      data: {
+        'angleDegrees': readingValue,
+        'side': side,
+        'notes': notes,
+      },
       fromJsonT: (json) =>
           ScoliometerReading.fromJson(json as Map<String, dynamic>),
     );
@@ -387,33 +347,4 @@ class TrackingService {
     return [];
   }
 
-  /// Update exercise progress
-  Future<void> updateExerciseProgress({
-    required String planId,
-    required String exerciseId,
-    required int completedSets,
-    required int completedReps,
-    String? notes,
-  }) async {
-    // Mock mode
-    if (ApiConfig.useMockMode) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      return;
-    }
-
-    final response = await _apiClient.post(
-      ApiConfig.exerciseProgressUpdate,
-      data: {
-        'planId': planId,
-        'exerciseId': exerciseId,
-        'completedSets': completedSets,
-        'completedReps': completedReps,
-        'notes': notes,
-      },
-    );
-
-    if (!response.success) {
-      throw Exception(response.message ?? 'Failed to update exercise progress');
-    }
-  }
 }

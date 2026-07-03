@@ -65,30 +65,13 @@ class SettingsScreen extends StatelessWidget {
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'Mild scoliosis',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.edit_outlined),
-                          onPressed: () {},
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/edit-profile'),
                         ),
                       ],
                     ),
@@ -300,7 +283,13 @@ class SettingsScreen extends StatelessWidget {
                         title: 'About ScolioCare',
                         subtitle: 'Version 1.0.0',
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
+                        onTap: () => showAboutDialog(
+                          context: context,
+                          applicationName: 'ScolioCare',
+                          applicationVersion: '1.0.0',
+                          applicationLegalese:
+                              'ScolioCare is for informational support and does not replace professional medical advice.',
+                        ),
                       ),
                     ],
                   ),
@@ -311,7 +300,9 @@ class SettingsScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
+                      await context.read<AuthProvider>().signOut();
+                      if (!context.mounted) return;
                       Navigator.pushNamedAndRemoveUntil(
                           context, '/login', (_) => false);
                     },

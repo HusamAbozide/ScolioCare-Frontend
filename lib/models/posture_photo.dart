@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Model for posture photo data
 class PosturePhoto {
   final String id;
@@ -23,18 +21,41 @@ class PosturePhoto {
   });
 
   factory PosturePhoto.fromJson(Map<String, dynamic> json) {
+    final id = json['id'] ?? json['posturePhotoId'] ?? json['photoId'];
+    final imageUrl = json['imageUrl'] ?? json['photoUrl'] ?? json['filePath'];
+    final capturedAt = json['capturedAt'] ?? json['takenAt'];
+    final rawNotes = json['notes']?.toString();
+    final parsedView = _extractViewAngle(rawNotes);
     return PosturePhoto(
-      id: json['id'] ?? json['posturePhotoId'] ?? '',
-      userId: json['userId'] ?? '',
-      imageUrl: json['imageUrl'] ?? json['filePath'] ?? '',
+      id: id?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
+      imageUrl: imageUrl?.toString() ?? '',
       thumbnailUrl: json['thumbnailUrl'],
-      capturedAt: json['capturedAt'] != null
-          ? DateTime.parse(json['capturedAt'])
+      capturedAt: capturedAt != null
+          ? DateTime.tryParse(capturedAt.toString()) ?? DateTime.now()
           : DateTime.now(),
-      viewAngle: json['viewAngle'] ?? 'FRONT',
-      notes: json['notes'],
+      viewAngle:
+          json['viewAngle']?.toString() ?? json['view']?.toString() ?? parsedView,
+      notes: _stripViewAnglePrefix(rawNotes),
       metadata: json['metadata'],
     );
+  }
+
+  static String _extractViewAngle(String? notes) {
+    final prefix = notes?.split('|').first.toUpperCase();
+    const validAngles = {'FRONT', 'BACK', 'LEFT', 'RIGHT'};
+    return validAngles.contains(prefix) ? prefix! : 'FRONT';
+  }
+
+  static String? _stripViewAnglePrefix(String? notes) {
+    if (notes == null || !notes.contains('|')) return notes;
+    final parts = notes.split('|');
+    if (parts.length < 2) return notes;
+    final prefix = parts.first.toUpperCase();
+    const validAngles = {'FRONT', 'BACK', 'LEFT', 'RIGHT'};
+    if (!validAngles.contains(prefix)) return notes;
+    final stripped = parts.sublist(1).join('|').trim();
+    return stripped.isEmpty ? null : stripped;
   }
 
   Map<String, dynamic> toJson() {
@@ -74,13 +95,18 @@ class PostureComparison {
   });
 
   factory PostureComparison.fromJson(Map<String, dynamic> json) {
+    final before = json['beforePhoto'] ?? json['photoBefore'] ?? {};
+    final after = json['afterPhoto'] ?? json['photoAfter'] ?? {};
+    final comparisonDate = json['comparisonDate'] ??
+        json['comparedAt'] ??
+        json['createdAt'];
     return PostureComparison(
-      id: json['id'] ?? json['comparisonId'] ?? '',
-      userId: json['userId'] ?? '',
-      beforePhoto: PosturePhoto.fromJson(json['beforePhoto'] ?? {}),
-      afterPhoto: PosturePhoto.fromJson(json['afterPhoto'] ?? {}),
-      comparisonDate: json['comparisonDate'] != null
-          ? DateTime.parse(json['comparisonDate'])
+      id: json['id']?.toString() ?? json['comparisonId']?.toString() ?? '',
+      userId: json['userId']?.toString() ?? '',
+      beforePhoto: PosturePhoto.fromJson(before as Map<String, dynamic>),
+      afterPhoto: PosturePhoto.fromJson(after as Map<String, dynamic>),
+      comparisonDate: comparisonDate != null
+          ? DateTime.tryParse(comparisonDate.toString()) ?? DateTime.now()
           : DateTime.now(),
       analysisResult: json['analysisResult'],
       improvementScore: json['improvementScore']?.toDouble(),

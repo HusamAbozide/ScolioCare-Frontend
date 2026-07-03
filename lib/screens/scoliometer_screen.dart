@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
@@ -261,7 +260,7 @@ class _LandscapeMeasurementView extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         scolio.orientationStatus == OrientationStatus.ok
-                            ? 'Rotate clockwise and anticlockwise to capture the most stable reading.'
+                            ? 'Hold the phone steady. The circle fills and auto-saves when stable.'
                             : 'Adjust the phone orientation before capturing.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -361,11 +360,28 @@ class _AngleReadout extends StatelessWidget {
               child: AnimatedBuilder(
                 animation: pulseCtrl,
                 builder: (context, _) {
-                  return CircularProgressIndicator(
-                    value: stability,
-                    strokeWidth: 4,
-                    backgroundColor: classColor.withOpacity(0.15),
-                    valueColor: AlwaysStoppedAnimation<Color>(classColor),
+                  final progress =
+                      stability > 0.05 ? stability.clamp(0.0, 1.0) : null;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 4,
+                        backgroundColor: classColor.withOpacity(0.15),
+                        valueColor: AlwaysStoppedAnimation<Color>(classColor),
+                      ),
+                      if (stability >= 1)
+                        Icon(Icons.check, color: classColor, size: 20)
+                      else
+                        Text(
+                          '${(stability * 100).clamp(0, 99).toStringAsFixed(0)}%',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: classColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),

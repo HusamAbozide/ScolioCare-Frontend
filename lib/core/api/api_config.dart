@@ -33,7 +33,7 @@ class ApiConfig {
 
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(minutes: 5);
 
   // Storage keys
   static const String accessTokenKey = 'access_token';
@@ -52,6 +52,7 @@ class ApiConfig {
   static const String logout = '/auth/logout';
   static const String refreshToken = '/auth/refresh';
   static const String changePassword = '/auth/change-password';
+  static const String resetPassword = '/auth/reset-password';
   static const String sendOtp = '/auth/otp/send';
   static const String verifyOtp = '/auth/otp/verify';
 
@@ -111,6 +112,7 @@ class ApiConfig {
 
   // Exercise Logs
   static const String exerciseLogSubmit = '/log/submit'; // POST
+  static const String exerciseLogToday = '/log/today'; // DELETE
   static String exerciseLogByUserId(String userId) => '/log/$userId'; // GET
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -118,7 +120,6 @@ class ApiConfig {
   // ══════════════════════════════════════════════════════════════════════════
 
   // Progress Tracking
-  static const String progressCreate = '/progress/create'; // POST
   static String progressByUserId(String userId) => '/progress/$userId'; // GET
   static String progressSummary(String userId) =>
       '/progress/$userId/summary'; // GET
@@ -138,10 +139,6 @@ class ApiConfig {
   static String postureByUserId(String userId) => '/posture/$userId'; // GET
   static String postureComparisons(String userId) =>
       '/posture/$userId/comparisons'; // GET
-
-  // Exercise Progress
-  static const String exerciseProgressUpdate =
-      '/exercise-progress/update'; // POST
 
   // ══════════════════════════════════════════════════════════════════════════
   // Imaging Module (NOTE: Uses /api/v1 prefix!)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
+import 'package:flutter/services.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/app_header.dart';
 import '../theme/app_theme.dart';
@@ -135,6 +136,21 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       );
 
       if (success && mounted) {
+        if (widget.purpose == 'PASSWORD_RESET') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email verified. Create a new password.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pushReplacementNamed(
+            context,
+            '/reset-password',
+            arguments: {'email': widget.email},
+          );
+          return;
+        }
+
         // OTP verified successfully - now auto-login the user
         // The backend should return tokens after successful OTP verification
         // Check if user is now logged in
@@ -286,14 +302,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           controller: _controllers[index],
                           focusNode: _focusNodes[index],
                           textAlign: TextAlign.center,
+                          textAlignVertical: TextAlignVertical.center,
                           keyboardType: TextInputType.number,
                           maxLength: 1,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                           decoration: InputDecoration(
                             counterText: '',
+                            contentPadding: EdgeInsets.zero,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),

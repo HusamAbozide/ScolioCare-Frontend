@@ -37,6 +37,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
     try {
       final authProvider = context.read<AuthProvider>();
+      if (!authProvider.isLoggedIn) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please sign in again to change your password.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+        return;
+      }
+
       final success = await authProvider.changePassword(
         currentPassword: _currentPasswordController.text,
         newPassword: _newPasswordController.text,

@@ -52,10 +52,13 @@ class ScanProvider extends ChangeNotifier {
       );
 
       _currentImage = imageAsset;
+      _currentAnalysis = null;
 
       // Automatically validate the image
       if (imageAsset.isValid) {
         await triggerAnalysis(imageAsset.imageId);
+      } else {
+        _errorMessage = 'Image validation failed';
       }
 
       return imageAsset;
@@ -63,7 +66,7 @@ class ScanProvider extends ChangeNotifier {
       _errorMessage = e.message;
       return null;
     } catch (e) {
-      _errorMessage = 'Failed to upload image';
+      _errorMessage = 'Failed to upload image: $e';
       return null;
     } finally {
       _isUploading = false;
@@ -83,11 +86,15 @@ class ScanProvider extends ChangeNotifier {
       // Poll for completion if status is PENDING or PROCESSING
       if (analysis.status == 'PENDING' || analysis.status == 'PROCESSING') {
         await _pollAnalysisStatus(analysis.analysisId);
+      } else if (analysis.status == 'COMPLETED') {
+        _addCompletedAnalysisToHistory(analysis);
+      } else if (analysis.status == 'FAILED') {
+        _errorMessage = analysis.errorMessage ?? 'Analysis failed';
       }
     } on ApiException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
-      _errorMessage = 'Failed to start analysis';
+      _errorMessage = 'Failed to start analysis: $e';
     } finally {
       _isAnalyzing = false;
       notifyListeners();
@@ -107,18 +114,7 @@ class ScanProvider extends ChangeNotifier {
         notifyListeners();
 
         if (analysis.status == 'COMPLETED') {
-          // Add to scan history
-          if (analysis.severity != null && analysis.curve != null) {
-            _scans.insert(
-              0,
-              ScanRecord(
-                id: _scans.length + 1,
-                date: analysis.analyzedAt ?? DateTime.now(),
-                severity: analysis.severity!.severityLevel,
-                curveType: analysis.curve!.curveType,
-              ),
-            );
-          }
+          _addCompletedAnalysisToHistory(analysis);
           break;
         } else if (analysis.status == 'FAILED') {
           _errorMessage = analysis.errorMessage ?? 'Analysis failed';
@@ -170,6 +166,25 @@ class ScanProvider extends ChangeNotifier {
   void addScan(ScanRecord scan) {
     _scans.insert(0, scan);
     notifyListeners();
+  }
+
+  void _addCompletedAnalysisToHistory(AIAnalysis analysis) {
+    if (analysis.severity == null || analysis.curve == null) return;
+    final alreadyAdded = _scans.any((scan) =>
+        scan.date == (analysis.analyzedAt ?? analysis.createdAt) &&
+        scan.severity == analysis.severity!.severityLevel &&
+        scan.curveType == analysis.curve!.curveType);
+    if (alreadyAdded) return;
+
+    _scans.insert(
+      0,
+      ScanRecord(
+        id: _scans.length + 1,
+        date: analysis.analyzedAt ?? analysis.createdAt ?? DateTime.now(),
+        severity: analysis.severity!.severityLevel,
+        curveType: analysis.curve!.curveType,
+      ),
+    );
   }
 
   void addAtrRecord(AtrRecord record) {

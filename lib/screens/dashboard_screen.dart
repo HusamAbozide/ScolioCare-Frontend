@@ -280,45 +280,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 color: theme.colorScheme.onSurfaceVariant),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.success.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Latest: 5° Thoracic',
-                                style: TextStyle(
-                                  color: AppTheme.success,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color:
-                                    theme.colorScheme.primary.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '↓ 3° improvement',
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -352,23 +313,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        _ExerciseItem(
-                            name: 'Cat-Cow Stretch',
-                            duration: '5 min',
-                            done: true,
-                            theme: theme),
-                        const SizedBox(height: 12),
-                        _ExerciseItem(
-                            name: 'Side Plank Hold',
-                            duration: '3 min',
-                            done: true,
-                            theme: theme),
-                        const SizedBox(height: 12),
-                        _ExerciseItem(
-                            name: 'Thoracic Extension',
-                            duration: '5 min',
-                            done: false,
-                            theme: theme),
+                        Row(
+                          children: [
+                            Icon(Icons.fitness_center,
+                                color: theme.colorScheme.primary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Open your exercise program to view today\'s exercises and save completions.',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -413,46 +372,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     style: theme.textTheme.titleSmall?.copyWith(
                                         fontWeight: FontWeight.w600)),
                                 Text(
-                                  'Complete your exercises for today to maintain your streak!',
+                                  'Enable reminders and complete your exercise program to build consistency.',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text('🔥 7 day streak',
-                                style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500)),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color:
-                                  theme.colorScheme.secondary.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text('2/3 completed',
-                                style: TextStyle(
-                                    color: theme.colorScheme.secondary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500)),
                           ),
                         ],
                       ),
@@ -608,9 +534,16 @@ class _AppDrawer extends StatelessWidget {
             label: 'Sign Out',
             iconColor: AppTheme.destructive,
             labelColor: AppTheme.destructive,
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              // TODO: trigger sign-out logic
+              await context.read<AuthProvider>().signOut();
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (_) => false,
+                );
+              }
             },
           ),
           SizedBox(height: MediaQuery.of(context).padding.bottom + 8),

@@ -179,11 +179,14 @@ class AuthService {
       return;
     }
 
-    await _apiClient.post(
-      ApiConfig.logout,
-      data: {},
-    );
-    await _apiClient.clearTokens();
+    try {
+      await _apiClient.post(
+        ApiConfig.logout,
+        data: {},
+      );
+    } finally {
+      await _apiClient.clearTokens();
+    }
   }
 
   Future<bool> isLoggedIn() async {
@@ -209,6 +212,30 @@ class AuthService {
       },
       fromJsonT: (json) => json as Map<String, dynamic>,
     );
+
+    return response.success;
+  }
+
+  Future<bool> resetPassword({
+    required String newPassword,
+  }) async {
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(seconds: 1));
+      await _apiClient.clearTokens();
+      return true;
+    }
+
+    final response = await _apiClient.put<Map<String, dynamic>>(
+      ApiConfig.resetPassword,
+      data: {
+        'newPassword': newPassword,
+      },
+      fromJsonT: (json) => json as Map<String, dynamic>,
+    );
+
+    if (response.success) {
+      await _apiClient.clearTokens();
+    }
 
     return response.success;
   }
