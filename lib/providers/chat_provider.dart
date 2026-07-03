@@ -86,8 +86,7 @@ class ChatProvider extends ChangeNotifier {
       // Add error message as bot response
       _messages.add(ChatMessage(
         role: MessageRole.bot,
-        message:
-            "I'm sorry, I encountered an error processing your message. Please try again.",
+        message: _chatErrorMessage(e),
       ));
       notifyListeners();
     }
@@ -107,6 +106,14 @@ class ChatProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  String _chatErrorMessage(Object error) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    if (message.isEmpty) {
+      return "I'm sorry, I encountered an error processing your message. Please try again.";
+    }
+    return message;
   }
 
   @override

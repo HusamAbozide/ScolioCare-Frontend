@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../providers/scan_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/chat_fab.dart';
 
 class ImageCaptureScreen extends StatefulWidget {
   const ImageCaptureScreen({super.key});
@@ -15,6 +16,7 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
   // 0 = tips, 1 = preview, 2 = validation
   int _step = 0;
   XFile? _imageFile;
+  bool _fromCamera = false;
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage(ImageSource source) async {
@@ -26,8 +28,30 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
     if (file != null) {
       setState(() {
         _imageFile = file;
+        _fromCamera = source == ImageSource.camera;
         _step = 1;
       });
+    }
+  }
+
+  Future<void> _analyzeSelectedImage() async {
+    final imageFile = _imageFile;
+    if (imageFile == null) return;
+
+    setState(() => _step = 2);
+
+    final scanProvider = context.read<ScanProvider>();
+    final imageAsset = await scanProvider.uploadImage(
+      File(imageFile.path),
+      'FRONT',
+      fromCamera: _fromCamera,
+    );
+
+    if (!mounted) return;
+
+    if (imageAsset != null &&
+        scanProvider.currentAnalysis?.status == 'COMPLETED') {
+      Navigator.pushReplacementNamed(context, '/results');
     }
   }
 
@@ -130,14 +154,14 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
 
   Widget _buildTips(ThemeData theme) {
     final tips = [
-      _Tip(Icons.sunny, 'Good Lighting',
-          'Ensure the room is well-lit with even lighting. Avoid harsh shadows.'),
-      _Tip(Icons.person_outline, 'Proper Position',
-          'Stand upright with feet shoulder-width apart. Keep arms relaxed at your sides.'),
-      _Tip(Icons.accessibility, 'Expose Back',
-          'Remove or lift clothing to expose the full back area for accurate analysis.'),
-      _Tip(Icons.phone_android, 'Camera Position',
-          'Position the camera at waist height, about 3 feet away. Keep it level and steady.'),
+      _Tip(Icons.medical_information_outlined, 'Use a Full Spine X-ray',
+          'Choose a clear radiograph that shows the full continuous spine.'),
+      _Tip(Icons.crop_free, 'Avoid Cropped Images',
+          'Partial cervical, thoracic, or lumbar scans may be rejected by the ML service.'),
+      _Tip(Icons.contrast, 'Clear Grayscale Image',
+          'Use a readable X-ray image with visible vertebrae and minimal glare.'),
+      _Tip(Icons.privacy_tip_outlined, 'Medical Review Required',
+          'AI results are for support only and should be reviewed by a healthcare professional.'),
     ];
 
     return Column(
@@ -157,15 +181,15 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
           ),
           child: Column(
             children: [
-              Icon(Icons.camera_alt,
+              Icon(Icons.medical_information_outlined,
                   size: 48, color: theme.colorScheme.primary),
               const SizedBox(height: 12),
-              Text('Photography Tips',
+              Text('X-ray Analysis',
                   style: theme.textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Text(
-                'Follow these tips for the best analysis results',
+                'Upload a full spine X-ray to run the ML analysis',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -231,7 +255,7 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
           child: FilledButton.icon(
             onPressed: _showPickerSheet,
             icon: const Icon(Icons.add_a_photo),
-            label: const Text('Add Photo'),
+            label: const Text('Add X-ray'),
           ),
         ),
       ],
@@ -327,9 +351,9 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: FilledButton.icon(
-              onPressed: () => setState(() => _step = 2),
+              onPressed: _analyzeSelectedImage,
               icon: const Icon(Icons.analytics),
-              label: const Text('Analyze Photo'),
+              label: const Text('Analyze X-ray'),
             ),
           )
         else
@@ -339,56 +363,90 @@ class _ImageCaptureScreenState extends State<ImageCaptureScreen> {
   }
 
   Widget _buildValidation(ThemeData theme) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Animated processing
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: SizedBox(
-              width: 64,
-              height: 64,
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-                strokeWidth: 3,
+    return Consumer<ScanProvider>(
+      builder: (context, scanProvider, _) {
+        final analysis = scanProvider.currentAnalysis;
+        final error = scanProvider.errorMessage ?? analysis?.errorMessage;
+        final isDone = analysis?.status == 'COMPLETED';
+        final isFailed = error != null || analysis?.status == 'FAILED';
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: (isFailed ? Colors.red : theme.colorScheme.primary)
+                    .withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: isDone
+                    ? Icon(Icons.check_circle,
+                        color: AppTheme.success, size: 64)
+                    : isFailed
+                        ? const Icon(Icons.error_outline,
+                            color: Colors.red, size: 64)
+                        : SizedBox(
+                            width: 64,
+                            height: 64,
+                            child: CircularProgressIndicator(
+                              color: theme.colorScheme.primary,
+                              strokeWidth: 3,
+                            ),
+                          ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text('Analyzing Image...',
-            style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Text(
-          'Our AI is processing your spine image',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 32),
-
-        // Checks
-        ...[
-          _ValidationCheck('Image quality', true, theme),
-          const SizedBox(height: 12),
-          _ValidationCheck('Spine detection', true, theme),
-          const SizedBox(height: 12),
-          _ValidationCheck('Curvature analysis', false, theme),
-        ],
-
-        const SizedBox(height: 32),
-        FilledButton(
-          onPressed: () => Navigator.pushNamed(context, '/results'),
-          child: const Text('View Results'),
-        ),
-      ],
+            const SizedBox(height: 24),
+            Text(
+              isFailed
+                  ? 'Analysis Failed'
+                  : isDone
+                      ? 'Analysis Complete'
+                      : 'Analyzing X-ray...',
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                isFailed
+                    ? error ?? 'The ML service could not analyze this image.'
+                    : isDone
+                        ? 'Your spine analysis is ready.'
+                        : 'The backend is sending your X-ray to the ML service.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 32),
+            _ValidationCheck(
+                'Image upload', scanProvider.currentImage != null, theme),
+            const SizedBox(height: 12),
+            _ValidationCheck(
+                'ML service processing', isDone || isFailed, theme),
+            const SizedBox(height: 12),
+            _ValidationCheck('Curvature analysis', isDone, theme),
+            const SizedBox(height: 32),
+            if (isDone)
+              FilledButton(
+                onPressed: () =>
+                    Navigator.pushReplacementNamed(context, '/results'),
+                child: const Text('View Results'),
+              )
+            else if (isFailed)
+              FilledButton.icon(
+                onPressed: () => setState(() => _step = 1),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Another Image'),
+              ),
+          ],
+        );
+      },
     );
   }
 }

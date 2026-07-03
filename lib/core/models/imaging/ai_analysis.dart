@@ -2,12 +2,13 @@ class AIAnalysis {
   final String analysisId;
   final String imageId;
   final String userId;
-  final String modelVersionId;
+  final String? modelVersionId;
   final String status;
   final double? confidenceScore;
   final double? processingTimeSeconds;
-  final Map<String, dynamic>? rawOutput;
+  final String? summaryText;
   final DateTime? analyzedAt;
+  final DateTime? createdAt;
   final String? errorMessage;
   final SeverityClassification? severity;
   final CurveDetection? curve;
@@ -16,12 +17,13 @@ class AIAnalysis {
     required this.analysisId,
     required this.imageId,
     required this.userId,
-    required this.modelVersionId,
+    this.modelVersionId,
     required this.status,
     this.confidenceScore,
     this.processingTimeSeconds,
-    this.rawOutput,
+    this.summaryText,
     this.analyzedAt,
+    this.createdAt,
     this.errorMessage,
     this.severity,
     this.curve,
@@ -32,13 +34,22 @@ class AIAnalysis {
       analysisId: json['analysisId'] as String,
       imageId: json['imageId'] as String,
       userId: json['userId'] as String,
-      modelVersionId: json['modelVersionId'] as String,
+      modelVersionId:
+          (json['modelVersionId'] ?? json['modelVersion']) as String?,
       status: json['status'] as String,
-      confidenceScore: json['confidenceScore'] as double?,
-      processingTimeSeconds: json['processingTimeSeconds'] as double?,
-      rawOutput: json['rawOutput'] as Map<String, dynamic>?,
-      analyzedAt: json['analyzedAt'] != null
-          ? DateTime.parse(json['analyzedAt'] as String)
+      confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ??
+          ((json['severity'] as Map<String, dynamic>?)?['confidenceScore']
+                  as num?)
+              ?.toDouble(),
+      processingTimeSeconds:
+          (json['processingTimeSeconds'] as num?)?.toDouble(),
+      summaryText: json['summaryText'] as String?,
+      analyzedAt: (json['completedAt'] ?? json['analyzedAt']) != null
+          ? DateTime.parse(
+              (json['completedAt'] ?? json['analyzedAt']) as String)
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
       errorMessage: json['errorMessage'] as String?,
       severity: json['severity'] != null
@@ -54,49 +65,63 @@ class AIAnalysis {
 
 class SeverityClassification {
   final String severityId;
-  final String analysisId;
+  final String? analysisId;
   final String severityLevel;
+  final double? confidenceScore;
   final String? classificationNotes;
-  final DateTime classifiedAt;
+  final DateTime? classifiedAt;
 
   SeverityClassification({
     required this.severityId,
-    required this.analysisId,
+    this.analysisId,
     required this.severityLevel,
+    this.confidenceScore,
     this.classificationNotes,
-    required this.classifiedAt,
+    this.classifiedAt,
   });
 
   factory SeverityClassification.fromJson(Map<String, dynamic> json) {
     return SeverityClassification(
-      severityId: json['severityId'] as String,
-      analysisId: json['analysisId'] as String,
+      severityId:
+          (json['severityId'] ?? json['classificationId'] ?? '') as String,
+      analysisId: json['analysisId'] as String?,
       severityLevel: json['severityLevel'] as String,
+      confidenceScore: (json['confidenceScore'] as num?)?.toDouble(),
       classificationNotes: json['classificationNotes'] as String?,
-      classifiedAt: DateTime.parse(json['classifiedAt'] as String),
+      classifiedAt: json['classifiedAt'] != null
+          ? DateTime.parse(json['classifiedAt'] as String)
+          : null,
     );
   }
 }
 
 class CurveDetection {
   final String curveId;
-  final String analysisId;
+  final String? analysisId;
   final String curveType;
-  final DateTime classifiedAt;
+  final double? cobbAngleDegrees;
+  final String? rawOutput;
+  final DateTime? classifiedAt;
 
   CurveDetection({
     required this.curveId,
-    required this.analysisId,
+    this.analysisId,
     required this.curveType,
-    required this.classifiedAt,
+    this.cobbAngleDegrees,
+    this.rawOutput,
+    this.classifiedAt,
   });
 
   factory CurveDetection.fromJson(Map<String, dynamic> json) {
     return CurveDetection(
-      curveId: json['curveId'] as String,
-      analysisId: json['analysisId'] as String,
+      curveId: (json['curveId'] ?? json['detectionId'] ?? '') as String,
+      analysisId: json['analysisId'] as String?,
       curveType: json['curveType'] as String,
-      classifiedAt: DateTime.parse(json['classifiedAt'] as String),
+      cobbAngleDegrees: (json['cobbAngleDegrees'] as num?)?.toDouble(),
+      rawOutput: json['rawOutput'] as String?,
+      classifiedAt: json['classifiedAt'] != null
+          ? DateTime.parse(json['classifiedAt'] as String)
+          : null,
     );
   }
 }

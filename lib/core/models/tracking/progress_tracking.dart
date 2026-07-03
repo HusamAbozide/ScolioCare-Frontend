@@ -63,13 +63,20 @@ class PainLevelTracking {
   });
 
   factory PainLevelTracking.fromJson(Map<String, dynamic> json) {
+    final id = json['painTrackingId'] ?? json['painId'];
+    final location = json['painLocation'] ?? json['area'];
+    final description = json['painDescription'] ?? json['notes'];
+    final recorded = json['recordedAt'] ??
+        json['createdAt'] ??
+        json['trackingDate'] ??
+        DateTime.now().toIso8601String();
     return PainLevelTracking(
-      painTrackingId: json['painTrackingId'] as String,
-      progressId: json['progressId'] as String,
-      painLevel: json['painLevel'] as int,
-      painLocation: json['painLocation'] as String?,
-      painDescription: json['painDescription'] as String?,
-      recordedAt: DateTime.parse(json['recordedAt'] as String),
+      painTrackingId: id?.toString() ?? '',
+      progressId: json['progressId'] as String? ?? '',
+      painLevel: (json['painLevel'] as num?)?.toInt() ?? 0,
+      painLocation: location?.toString(),
+      painDescription: description?.toString(),
+      recordedAt: DateTime.tryParse(recorded.toString()) ?? DateTime.now(),
     );
   }
 
@@ -99,13 +106,16 @@ class ScoliometerReading {
   });
 
   factory ScoliometerReading.fromJson(Map<String, dynamic> json) {
+    final angle = json['readingValue'] ?? json['angleDegrees'];
+    final captured = json['capturedAt'] ?? json['recordedAt'];
     return ScoliometerReading(
       readingId: json['readingId'] as String,
-      progressId: json['progressId'] as String,
-      readingValue: (json['readingValue'] as num).toDouble(),
-      unit: json['unit'] as String,
-      bodyPositionNotes: json['bodyPositionNotes'] as String?,
-      capturedAt: DateTime.parse(json['capturedAt'] as String),
+      progressId: json['progressId'] as String? ?? '',
+      readingValue: (angle as num).toDouble(),
+      unit: json['unit'] as String? ?? 'degrees',
+      bodyPositionNotes:
+          json['bodyPositionNotes'] as String? ?? json['notes'] as String?,
+      capturedAt: DateTime.parse(captured as String),
     );
   }
 

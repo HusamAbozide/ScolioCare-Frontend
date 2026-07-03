@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import '../api/api_client.dart';
 import '../api/api_config.dart';
 import '../../models/posture_photo.dart';
@@ -14,12 +15,31 @@ class PostureService {
   Future<PosturePhoto> uploadPosturePhoto({
     required File imageFile,
     required String viewAngle,
+    required String name,
     String? notes,
   }) async {
-    // For now, this would need backend implementation
-    // In a real scenario, you'd use multipart/form-data upload
-    throw UnimplementedError(
-        'Multipart upload requires additional ApiClient support');
+    try {
+      final fileName = imageFile.path.split(Platform.pathSeparator).last;
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(imageFile.path, filename: fileName),
+        'notes':
+            '${viewAngle.trim().toUpperCase()}|${name.trim()}|${notes?.trim() ?? ''}',
+      });
+
+      final response = await _apiClient.postMultipart<PosturePhoto>(
+        ApiConfig.postureUpload,
+        formData: formData,
+        fromJsonT: (json) => PosturePhoto.fromJson(json as Map<String, dynamic>),
+      );
+
+      if (response.success && response.data != null) {
+        return response.data!;
+      }
+
+      throw Exception(response.message ?? 'Failed to upload posture photo');
+    } catch (e) {
+      throw Exception('Error uploading posture photo: $e');
+    }
   }
 
   /// Get all posture photos for a user
@@ -52,8 +72,8 @@ class PostureService {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiConfig.postureCompare,
         data: {
-          'beforePhotoId': beforePhotoId,
-          'afterPhotoId': afterPhotoId,
+          'photoBeforeId': beforePhotoId,
+          'photoAfterId': afterPhotoId,
           if (notes != null) 'notes': notes,
         },
         fromJsonT: (json) => json as Map<String, dynamic>,
@@ -90,6 +110,34 @@ class PostureService {
     }
   }
 
+  Future<void> deletePosturePhoto(String photoId) async {
+    try {
+      final response = await _apiClient.delete<void>(
+        ApiConfig.postureDeletePhoto(photoId),
+      );
+
+      if (!response.success) {
+        throw Exception(response.message ?? 'Failed to delete posture photo');
+      }
+    } catch (e) {
+      throw Exception('Error deleting posture photo: $e');
+    }
+  }
+
+  Future<void> deletePostureComparison(String comparisonId) async {
+    try {
+      final response = await _apiClient.delete<void>(
+        ApiConfig.postureDeleteComparison(comparisonId),
+      );
+
+      if (!response.success) {
+        throw Exception(response.message ?? 'Failed to delete comparison');
+      }
+    } catch (e) {
+      throw Exception('Error deleting comparison: $e');
+    }
+  }
+
   /// Get mock posture photos for development/testing
   List<PosturePhoto> getMockPosturePhotos() {
     return [
@@ -100,6 +148,7 @@ class PostureService {
         capturedAt: DateTime.now().subtract(const Duration(days: 30)),
         viewAngle: 'FRONT',
         notes: 'Initial posture photo',
+        name: 'Baseline front',
       ),
       PosturePhoto(
         id: '2',
@@ -108,6 +157,7 @@ class PostureService {
         capturedAt: DateTime.now().subtract(const Duration(days: 20)),
         viewAngle: 'BACK',
         notes: 'Back view for comparison',
+        name: 'Back check',
       ),
       PosturePhoto(
         id: '3',
@@ -116,6 +166,7 @@ class PostureService {
         capturedAt: DateTime.now().subtract(const Duration(days: 7)),
         viewAngle: 'LEFT',
         notes: 'Left side profile',
+        name: 'Left profile',
       ),
       PosturePhoto(
         id: '4',
@@ -124,6 +175,7 @@ class PostureService {
         capturedAt: DateTime.now(),
         viewAngle: 'FRONT',
         notes: 'Latest posture photo',
+        name: 'Latest front',
       ),
     ];
   }

@@ -3,12 +3,14 @@ import 'dart:io';
 import '../models/scan_record.dart';
 import '../core/api/api_client.dart';
 import '../core/services/imaging_service.dart';
+import '../core/services/tracking_service.dart';
 import '../core/models/imaging/image_asset.dart';
 import '../core/models/imaging/ai_analysis.dart';
 import '../core/api/api_exception.dart';
 
 class ScanProvider extends ChangeNotifier {
   final ImagingService _imagingService = ImagingService(ApiClient());
+  final TrackingService _trackingService = TrackingService(ApiClient());
 
   final List<ScanRecord> _scans = [];
   final List<AtrRecord> _atrRecords = [];
@@ -52,10 +54,13 @@ class ScanProvider extends ChangeNotifier {
       );
 
       _currentImage = imageAsset;
+      _currentAnalysis = null;
 
       // Automatically validate the image
       if (imageAsset.isValid) {
         await triggerAnalysis(imageAsset.imageId);
+      } else {
+        _errorMessage = 'Image validation failed';
       }
 
       return imageAsset;
@@ -63,7 +68,7 @@ class ScanProvider extends ChangeNotifier {
       _errorMessage = e.message;
       return null;
     } catch (e) {
-      _errorMessage = 'Failed to upload image';
+      _errorMessage = 'Failed to upload image: $e';
       return null;
     } finally {
       _isUploading = false;
@@ -83,11 +88,15 @@ class ScanProvider extends ChangeNotifier {
       // Poll for completion if status is PENDING or PROCESSING
       if (analysis.status == 'PENDING' || analysis.status == 'PROCESSING') {
         await _pollAnalysisStatus(analysis.analysisId);
+      } else if (analysis.status == 'COMPLETED') {
+        _addCompletedAnalysisToHistory(analysis);
+      } else if (analysis.status == 'FAILED') {
+        _errorMessage = analysis.errorMessage ?? 'Analysis failed';
       }
     } on ApiException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
-      _errorMessage = 'Failed to start analysis';
+      _errorMessage = 'Failed to start analysis: $e';
     } finally {
       _isAnalyzing = false;
       notifyListeners();
@@ -107,18 +116,7 @@ class ScanProvider extends ChangeNotifier {
         notifyListeners();
 
         if (analysis.status == 'COMPLETED') {
-          // Add to scan history
-          if (analysis.severity != null && analysis.curve != null) {
-            _scans.insert(
-              0,
-              ScanRecord(
-                id: _scans.length + 1,
-                date: analysis.analyzedAt ?? DateTime.now(),
-                severity: analysis.severity!.severityLevel,
-                curveType: analysis.curve!.curveType,
-              ),
-            );
-          }
+          _addCompletedAnalysisToHistory(analysis);
           break;
         } else if (analysis.status == 'FAILED') {
           _errorMessage = analysis.errorMessage ?? 'Analysis failed';
@@ -167,9 +165,60 @@ class ScanProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadAtrHistory(String userId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final readings = await _trackingService.getScoliometerHistory(userId);
+      _atrRecords
+        ..clear()
+        ..addAll(
+          readings.asMap().entries.map((entry) {
+            final reading = entry.value;
+            final value = reading.readingValue.abs();
+            final notes = reading.bodyPositionNotes?.toLowerCase() ?? '';
+            return AtrRecord(
+              id: entry.key + 1,
+              date: reading.capturedAt,
+              thoracic: notes.contains('lumbar') ? 0 : value,
+              lumbar: notes.contains('lumbar') ? value : 0,
+            );
+          }),
+        );
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Failed to load ATR history';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void addScan(ScanRecord scan) {
     _scans.insert(0, scan);
     notifyListeners();
+  }
+
+  void _addCompletedAnalysisToHistory(AIAnalysis analysis) {
+    if (analysis.severity == null || analysis.curve == null) return;
+    final alreadyAdded = _scans.any((scan) =>
+        scan.date == (analysis.analyzedAt ?? analysis.createdAt) &&
+        scan.severity == analysis.severity!.severityLevel &&
+        scan.curveType == analysis.curve!.curveType);
+    if (alreadyAdded) return;
+
+    _scans.insert(
+      0,
+      ScanRecord(
+        id: _scans.length + 1,
+        date: analysis.analyzedAt ?? analysis.createdAt ?? DateTime.now(),
+        severity: analysis.severity!.severityLevel,
+        curveType: analysis.curve!.curveType,
+      ),
+    );
   }
 
   void addAtrRecord(AtrRecord record) {

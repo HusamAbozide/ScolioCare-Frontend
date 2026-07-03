@@ -12,6 +12,17 @@ class ApiConfig {
   static String get baseUrl =>
       _apiBaseUrlOverride.isNotEmpty ? _apiBaseUrlOverride : _defaultBaseUrl();
 
+  static String resolveFileUrl(String pathOrUrl) {
+    if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+      return pathOrUrl;
+    }
+
+    final normalized = pathOrUrl.startsWith('/')
+        ? pathOrUrl
+        : '/${pathOrUrl.replaceAll('\\', '/')}';
+    return '$baseUrl$normalized';
+  }
+
   static String _defaultBaseUrl() {
     if (kIsWeb) {
       return 'http://localhost:8081';
@@ -33,7 +44,7 @@ class ApiConfig {
 
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(minutes: 5);
 
   // Storage keys
   static const String accessTokenKey = 'access_token';
@@ -52,6 +63,7 @@ class ApiConfig {
   static const String logout = '/auth/logout';
   static const String refreshToken = '/auth/refresh';
   static const String changePassword = '/auth/change-password';
+  static const String resetPassword = '/auth/reset-password';
   static const String sendOtp = '/auth/otp/send';
   static const String verifyOtp = '/auth/otp/verify';
 
@@ -76,6 +88,7 @@ class ApiConfig {
   // ══════════════════════════════════════════════════════════════════════════
   static const String consentAccept = '/consent/accept';
   static const String consentWithdraw = '/consent/withdraw';
+  static const String consentMy = '/consent/my';
   static const String medicalDisclaimer = '/medical-disclaimer';
   static const String legalDisclaimer = '/legal/disclaimer';
   static const String legalTerms = '/legal/terms';
@@ -111,6 +124,7 @@ class ApiConfig {
 
   // Exercise Logs
   static const String exerciseLogSubmit = '/log/submit'; // POST
+  static const String exerciseLogToday = '/log/today'; // DELETE
   static String exerciseLogByUserId(String userId) => '/log/$userId'; // GET
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -118,7 +132,6 @@ class ApiConfig {
   // ══════════════════════════════════════════════════════════════════════════
 
   // Progress Tracking
-  static const String progressCreate = '/progress/create'; // POST
   static String progressByUserId(String userId) => '/progress/$userId'; // GET
   static String progressSummary(String userId) =>
       '/progress/$userId/summary'; // GET
@@ -138,10 +151,10 @@ class ApiConfig {
   static String postureByUserId(String userId) => '/posture/$userId'; // GET
   static String postureComparisons(String userId) =>
       '/posture/$userId/comparisons'; // GET
-
-  // Exercise Progress
-  static const String exerciseProgressUpdate =
-      '/exercise-progress/update'; // POST
+  static String postureDeletePhoto(String photoId) =>
+      '/posture/photos/$photoId'; // DELETE
+  static String postureDeleteComparison(String comparisonId) =>
+      '/posture/comparisons/$comparisonId'; // DELETE
 
   // ══════════════════════════════════════════════════════════════════════════
   // Imaging Module (NOTE: Uses /api/v1 prefix!)

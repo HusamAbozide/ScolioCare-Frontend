@@ -88,14 +88,25 @@ class ApiClient {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data;
+        final body = response.data;
+        final data = body is Map<String, dynamic> &&
+                body['data'] is Map<String, dynamic>
+            ? body['data'] as Map<String, dynamic>
+            : body as Map<String, dynamic>;
+        final accessToken = data['accessToken'] as String?;
+        final refreshTokenValue = data['refreshToken'] as String?;
+
+        if (accessToken == null || refreshTokenValue == null) {
+          return false;
+        }
+
         await _secureStorage.write(
           key: ApiConfig.accessTokenKey,
-          value: data['accessToken'],
+          value: accessToken,
         );
         await _secureStorage.write(
           key: ApiConfig.refreshTokenKey,
-          value: data['refreshToken'],
+          value: refreshTokenValue,
         );
         return true;
       }

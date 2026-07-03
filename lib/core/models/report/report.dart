@@ -26,17 +26,24 @@ class Report {
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
+    final createdAt = json['createdAt'] ?? json['generatedAt'];
+    final completedAt = json['completedAt'];
+    final generatedAt = completedAt ?? createdAt;
     return Report(
       reportId: json['reportId'] as String,
-      analysisId: json['analysisId'] as String,
-      generatedAt: DateTime.parse(json['generatedAt'] as String),
-      severityLevel: json['severityLevel'] as String,
-      curveType: json['curveType'] as String,
-      confidenceScore: (json['confidenceScore'] as num).toDouble(),
-      summaryJson: json['summaryJson'] as Map<String, dynamic>,
-      disclaimerText: json['disclaimerText'] as String,
-      reportNotes: json['reportNotes'] as String?,
-      pdfUrl: json['pdfUrl'] as String,
+      analysisId: json['analysisId'] as String? ?? '',
+      generatedAt: generatedAt != null
+          ? DateTime.parse(generatedAt as String)
+          : DateTime.now(),
+      severityLevel: json['severityLevel'] as String? ?? 'Unavailable',
+      curveType: json['curveType'] as String? ?? 'Unavailable',
+      confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? 0,
+      summaryJson: json['summaryJson'] as Map<String, dynamic>? ?? {},
+      disclaimerText: json['disclaimerText'] as String? ??
+          'This report is for informational purposes only and does not replace professional medical advice.',
+      reportNotes:
+          json['reportNotes'] as String? ?? json['errorMessage'] as String?,
+      pdfUrl: json['pdfUrl'] as String? ?? json['downloadUrl'] as String? ?? '',
       status: json['status'] as String? ?? 'COMPLETED',
     );
   }

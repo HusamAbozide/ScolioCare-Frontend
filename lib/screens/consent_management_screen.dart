@@ -54,6 +54,14 @@ class _ConsentManagementScreenState extends State<ConsentManagementScreen> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LegalProvider>().loadConsents();
+    });
+  }
+
   Future<void> _toggleConsent(ConsentType consent, bool newValue) async {
     final legalProvider = context.read<LegalProvider>();
     bool success;
@@ -99,11 +107,11 @@ class _ConsentManagementScreenState extends State<ConsentManagementScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            const SizedBox(width: 12),
-            const Text('Required Consent'),
+            SizedBox(width: 12),
+            Text('Required Consent'),
           ],
         ),
         content: Text(
@@ -384,7 +392,7 @@ class _ConsentManagementScreenState extends State<ConsentManagementScreen> {
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
-                                            child: Text(
+                                            child: const Text(
                                               'Required',
                                               style: TextStyle(
                                                 color: Colors.red,

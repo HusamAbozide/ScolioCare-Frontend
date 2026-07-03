@@ -14,11 +14,16 @@ class ChatSession {
   });
 
   factory ChatSession.fromJson(Map<String, dynamic> json) {
+    final now = DateTime.now();
     return ChatSession(
-      sessionId: json['sessionId'] as String,
-      userId: json['userId'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      sessionId: json['sessionId'] as String? ?? '',
+      userId: json['userId'] as String? ?? '',
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : now,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : now,
       isActive: json['isActive'] as bool? ?? true,
     );
   }
@@ -52,12 +57,13 @@ class ChatMessage {
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    final createdAt = json['createdAt'] as String?;
     return ChatMessage(
-      messageId: json['messageId'] as String,
-      sessionId: json['sessionId'] as String,
-      role: json['role'] as String,
-      content: json['content'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      messageId: json['messageId'] as String? ?? '',
+      sessionId: json['sessionId'] as String? ?? '',
+      role: json['role'] as String? ?? 'ASSISTANT',
+      content: json['content'] as String? ?? '',
+      createdAt: createdAt != null ? DateTime.parse(createdAt) : DateTime.now(),
       tokensUsed: json['tokensUsed'] as int?,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );

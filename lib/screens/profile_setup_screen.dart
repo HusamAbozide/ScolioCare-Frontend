@@ -19,6 +19,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String? _scoliosisType;
   String? _currentTreatment;
   int _selectedAvatar = 0;
+  bool _handledRouteArgs = false;
 
   static const _avatars = ['👤', '👨', '👩', '🧑', '👦', '👧'];
 
@@ -34,6 +35,33 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     {'value': 'ankles', 'label': 'Ankles/Feet'},
     {'value': 'core', 'label': 'Core/Abdomen'},
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_handledRouteArgs) return;
+    _handledRouteArgs = true;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final isFreshSetup = args is Map<String, dynamic> &&
+        args['freshSetup'] == true;
+    if (isFreshSetup) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<ProfileProvider>().reset();
+        _ageController.clear();
+        _heightController.clear();
+        _weightController.clear();
+        setState(() {
+          _selectedGender = null;
+          _diagnosisTime = null;
+          _scoliosisType = null;
+          _currentTreatment = null;
+          _selectedAvatar = 0;
+        });
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -117,8 +145,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           if (provider.errorMessage == null) {
                             Navigator.pushNamedAndRemoveUntil(
                               context,
-                              '/dashboard',
+                              '/medical-consent',
                               (_) => false,
+                              arguments: {'nextRoute': '/dashboard'},
                             );
                           } else {
                             // Error - show message
@@ -389,7 +418,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(Icons.warning_amber, size: 16, color: AppTheme.warning),
+            const Icon(Icons.warning_amber, size: 16, color: AppTheme.warning),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -464,10 +493,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppTheme.success.withOpacity(0.2)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
                   Icon(Icons.check_circle, size: 20, color: AppTheme.success),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     'No significant weakness areas',
                     style: TextStyle(
@@ -738,7 +767,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           ),
           child: Row(
             children: [
-              Icon(Icons.check_circle, color: AppTheme.success),
+              const Icon(Icons.check_circle, color: AppTheme.success),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

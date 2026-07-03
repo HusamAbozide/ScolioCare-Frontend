@@ -19,13 +19,13 @@ class Reward {
 
   factory Reward.fromJson(Map<String, dynamic> json) {
     return Reward(
-      rewardId: json['rewardId'] as String,
-      name: json['name'] as String,
+      rewardId: json['rewardId']?.toString() ?? '',
+      name: json['name'] as String? ?? 'Reward',
       description: json['description'] as String?,
-      type: json['type'] as String,
-      points: json['points'] as int,
+      type: json['type']?.toString() ?? 'ACHIEVEMENT',
+      points: (json['points'] as num?)?.toInt() ?? 0,
       badgeIconUrl: json['badgeIconUrl'] as String?,
-      streakThreshold: json['streakThreshold'] as int?,
+      streakThreshold: (json['streakThreshold'] as num?)?.toInt(),
     );
   }
 
@@ -58,12 +58,19 @@ class UserReward {
   });
 
   factory UserReward.fromJson(Map<String, dynamic> json) {
+    final user = json['user'];
+    final userId = json['userId'] ??
+        (user is Map<String, dynamic> ? user['userId'] : null);
     return UserReward(
-      id: json['id'] as String,
-      userId: json['userId'] as String? ?? json['user']?['userId'] as String,
-      reward: Reward.fromJson(json['reward'] as Map<String, dynamic>),
-      earnedAt: DateTime.parse(json['earnedAt'] as String),
-      streakCount: json['streakCount'] as int?,
+      id: json['id']?.toString() ?? '',
+      userId: userId?.toString() ?? '',
+      reward: Reward.fromJson(
+        json['reward'] as Map<String, dynamic>? ?? <String, dynamic>{},
+      ),
+      earnedAt: json['earnedAt'] != null
+          ? DateTime.tryParse(json['earnedAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      streakCount: (json['streakCount'] as num?)?.toInt(),
     );
   }
 
