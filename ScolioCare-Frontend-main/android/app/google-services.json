@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "980034052185",
+    "project_id": "scoliocare2",
+    "storage_bucket": "scoliocare2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:980034052185:android:ff79ea1b9e9a06a02d1148",
+        "android_client_info": {
+          "package_name": "com.scoliocare.scoliocare_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANbXssGQDWjBQIG-eJUGqRromnA-dN3ZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

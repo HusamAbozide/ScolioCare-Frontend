@@ -1,11 +1,132 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart';
 import '../api/api_client.dart';
 import '../api/api_config.dart';
 import '../models/notification/notification.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+}
+
 class NotificationService {
   final ApiClient _apiClient;
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  late AndroidNotificationChannel _androidChannel;
 
   NotificationService(this._apiClient);
+
+  Future<void> initialize({String? userId}) async {
+    // 1. Request notification permissions
+    NotificationSettings settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+
+    print('User granted permission: ${settings.authorizationStatus}');
+
+    // 2. Set up Android Notification Channel
+    _androidChannel = const AndroidNotificationChannel(
+      'high_importance_channel', 
+      'High Importance Notifications', 
+      description: 'This channel is used for important notifications.', 
+      importance: Importance.max,
+      playSound: true,
+    );
+
+    // 3. Initialize Local Notifications Plugin
+    const AndroidInitializationSettings androidInitializationSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings iosInitializationSettings =
+        DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: androidInitializationSettings,
+      iOS: iosInitializationSettings,
+    );
+
+    await _localNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        print("Notification clicked: ${response.payload}");
+      },
+    );
+
+    // 4. Create the channel on Android
+    await _localNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_androidChannel);
+
+    // 5. Configure background messaging
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // 6. Listen to foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Got a message whilst in the foreground!');
+      if (message.notification != null) {
+        _showForegroundNotification(message);
+      }
+    });
+
+    // 7. Get token and automatically register with backend if userId is provided
+    try {
+      String? token = await _messaging.getToken();
+      print("FCM Token: $token");
+      if (token != null && userId != null) {
+        await registerDeviceToken(
+          userId: userId,
+          deviceToken: token,
+          platform: defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+        );
+      }
+    } catch (e) {
+      print("Error getting or registering FCM token: $e");
+    }
+  }
+
+  Future<void> _showForegroundNotification(RemoteMessage message) async {
+    RemoteNotification? notification = message.notification;
+    AndroidNotification? android = message.notification?.android;
+
+    if (notification != null) {
+      await _localNotificationsPlugin.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _androidChannel.id,
+            _androidChannel.name,
+            channelDescription: _androidChannel.description,
+            icon: android?.smallIcon ?? '@mipmap/ic_launcher',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: message.data.toString(),
+      );
+    }
+  }
+
 
   Future<List<AppNotification>> getNotifications(
     String userId, {

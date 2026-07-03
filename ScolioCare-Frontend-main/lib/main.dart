@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/profile_provider.dart';
@@ -48,6 +50,13 @@ import 'screens/account_deletion_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    print("Firebase initialization error: $e");
+  }
   runApp(const ScolioCareApp());
 }
 
@@ -59,7 +68,7 @@ class ScolioCareApp extends StatelessWidget {
     // Create single ApiClient instance for new services
     final apiClient = ApiClient();
     final chatService = ChatService(apiClient);
-    final notificationService = NotificationService(apiClient);
+    final notificationService = NotificationService(apiClient)..initialize();
     final reportService = ReportService(apiClient);
     final rewardService = RewardService(apiClient);
     final legalService = LegalService(apiClient);
