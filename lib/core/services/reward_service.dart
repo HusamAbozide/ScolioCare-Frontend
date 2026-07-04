@@ -51,6 +51,27 @@ class RewardService {
     return [];
   }
 
+  Future<int> getUserBalance(String userId) async {
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      return _generateMockUserRewards()
+          .fold<int>(0, (sum, reward) => sum + reward.reward.points);
+    }
+
+    final response = await _apiClient.get(
+      ApiConfig.userRewardBalance(userId),
+    );
+
+    if (response.success && response.data != null) {
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return (data['totalPoints'] as num?)?.toInt() ?? 0;
+      }
+    }
+
+    return 0;
+  }
+
   // Mock data generators
   List<Reward> _generateMockCatalog() {
     return [

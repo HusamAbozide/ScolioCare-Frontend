@@ -61,12 +61,21 @@ class UserReward {
     final user = json['user'];
     final userId = json['userId'] ??
         (user is Map<String, dynamic> ? user['userId'] : null);
+    final rewardJson = json['reward'] is Map<String, dynamic>
+        ? json['reward'] as Map<String, dynamic>
+        : <String, dynamic>{
+            'rewardId': json['rewardId'],
+            'name': json['name'],
+            'description': json['description'],
+            'type': json['type'],
+            'points': json['points'],
+            'badgeIconUrl': json['badgeIconUrl'],
+            'streakThreshold': json['streakThreshold'],
+          };
     return UserReward(
       id: json['id']?.toString() ?? '',
       userId: userId?.toString() ?? '',
-      reward: Reward.fromJson(
-        json['reward'] as Map<String, dynamic>? ?? <String, dynamic>{},
-      ),
+      reward: Reward.fromJson(rewardJson),
       earnedAt: json['earnedAt'] != null
           ? DateTime.tryParse(json['earnedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),

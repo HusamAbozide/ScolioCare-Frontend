@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import '../providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/notification_provider.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
@@ -147,6 +148,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         // The backend should return tokens after successful OTP verification
         // Check if user is now logged in
         if (authProvider.isLoggedIn) {
+          await context
+              .read<NotificationProvider>()
+              .initializePushNotifications();
+          if (!mounted) return;
           context.read<ProfileProvider>().reset();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

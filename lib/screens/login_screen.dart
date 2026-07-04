@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -127,6 +128,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else if (auth.isLoggedIn) {
+          await context
+              .read<NotificationProvider>()
+              .initializePushNotifications();
           final completedAssessment =
               await auth.hasCompletedInitialAssessment();
           if (!mounted) return;
@@ -267,10 +271,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               prefixIcon: Icon(Icons.mail_outlined),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Email is required';
-                              if (!v.contains('@'))
+                              }
+                              if (!v.contains('@')) {
                                 return 'Enter a valid email';
+                              }
                               return null;
                             },
                           ),

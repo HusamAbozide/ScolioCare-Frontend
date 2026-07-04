@@ -98,6 +98,7 @@ class ApiConfig {
   // ══════════════════════════════════════════════════════════════════════════
   static const String rewardsCatalog = '/rewards/catalog';
   static const String userRewards = '/rewards'; // + /{userId}
+  static String userRewardBalance(String userId) => '/rewards/$userId/balance';
 
   // ══════════════════════════════════════════════════════════════════════════
   // Exercise Module

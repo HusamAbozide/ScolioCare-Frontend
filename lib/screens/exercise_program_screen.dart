@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/exercise.dart';
+import '../core/models/reward/reward.dart';
 import '../providers/auth_provider.dart';
 import '../providers/exercise_provider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/reward_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/mobile_layout.dart';
 
@@ -369,11 +372,53 @@ Future<void> _toggle(
 ) async {
   final painLevel = context.read<ProfileProvider>().profile.painLevel;
   final wasCompleted = exercise.completed;
+  final userId = context.read<AuthProvider>().userId;
+  final rewardProvider = context.read<RewardProvider>();
+  final notificationProvider = context.read<NotificationProvider>();
+  Set<String> previousRewardIds = {};
+
+  if (!wasCompleted && userId != null && userId.isNotEmpty) {
+    try {
+      await rewardProvider.loadUserRewards(userId);
+      previousRewardIds = rewardProvider.userRewards
+          .map((reward) => reward.reward.rewardId)
+          .toSet();
+    } catch (_) {
+      previousRewardIds = rewardProvider.userRewards
+          .map((reward) => reward.reward.rewardId)
+          .toSet();
+    }
+    if (!context.mounted) return;
+  }
+
   final success = await provider.toggleTodayExercise(
     exercise,
     painLevel: painLevel.clamp(1, 10),
   );
   if (!context.mounted) return;
+  if (success && !wasCompleted) {
+    if (userId != null && userId.isNotEmpty) {
+      List<UserReward> newlyUnlocked = [];
+      try {
+        await rewardProvider.loadUserRewards(userId);
+        newlyUnlocked = rewardProvider.userRewards
+            .where((reward) =>
+                !previousRewardIds.contains(reward.reward.rewardId))
+            .toList();
+        await Future.wait([
+          notificationProvider.loadNotifications(),
+          notificationProvider.loadUnreadCount(),
+        ]);
+      } catch (_) {
+        // Exercise completion already succeeded; reward/notification refresh can retry later.
+      }
+      if (!context.mounted) return;
+      if (newlyUnlocked.isNotEmpty) {
+        await _showRewardUnlockedCard(context, newlyUnlocked.first);
+      }
+    }
+    if (!context.mounted) return;
+  }
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
@@ -384,6 +429,94 @@ Future<void> _toggle(
             : provider.errorMessage ?? 'Failed to update exercise',
       ),
       backgroundColor: success ? AppTheme.success : AppTheme.destructive,
+    ),
+  );
+}
+
+Future<void> _showRewardUnlockedCard(
+  BuildContext context,
+  UserReward userReward,
+) {
+  final theme = Theme.of(context);
+  final reward = userReward.reward;
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.success.withOpacity(0.14),
+              border: Border.all(color: AppTheme.success, width: 2),
+            ),
+            child: const Icon(
+              Icons.workspace_premium,
+              color: AppTheme.success,
+              size: 42,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Badge unlocked',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            reward.name,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (reward.description != null && reward.description!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              reward.description!,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '+${reward.points} points',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Continue'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/rewards');
+          },
+          child: const Text('View Rewards'),
+        ),
+      ],
     ),
   );
 }

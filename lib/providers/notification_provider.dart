@@ -10,6 +10,7 @@ class NotificationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   int _unreadCount = 0;
+  String? _initializedUserId;
 
   NotificationProvider(this._notificationService,
       {String? Function()? getUserId})
@@ -19,6 +20,29 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   int get unreadCount => _unreadCount;
+
+  Future<void> initializePushNotifications() async {
+    final userId = _getUserId();
+    debugPrint('NotificationProvider initialize requested for userId=$userId');
+    if (userId == null) {
+      debugPrint('NotificationProvider skipped: no logged-in user id yet.');
+      return;
+    }
+    if (_initializedUserId == userId) {
+      debugPrint('NotificationProvider skipped: already initialized for user.');
+      return;
+    }
+
+    try {
+      await _notificationService.initialize(userId: userId);
+      _initializedUserId = userId;
+      debugPrint('NotificationProvider initialized push for userId=$userId');
+    } catch (e) {
+      _error = 'Failed to initialize notifications: $e';
+      debugPrint(_error);
+      notifyListeners();
+    }
+  }
 
   Future<void> loadNotifications() async {
     final userId = _getUserId();
@@ -33,7 +57,8 @@ class NotificationProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      _notifications = await _notificationService.getNotifications(userId);
+      final notifications = await _notificationService.getNotifications(userId);
+      _notifications = _dedupeNotifications(notifications);
 
       _isLoading = false;
       notifyListeners();
@@ -176,5 +201,44 @@ class NotificationProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  List<AppNotification> _dedupeNotifications(
+    List<AppNotification> notifications,
+  ) {
+    final byContent = <String, AppNotification>{};
+
+    for (final notification in notifications) {
+      final key = [
+        notification.type,
+        notification.sentAt?.millisecondsSinceEpoch.toString() ?? '',
+      ].join('|');
+
+      final existing = byContent[key];
+      if (existing == null || _preferNotification(notification, existing)) {
+        byContent[key] = notification;
+      }
+    }
+
+    return byContent.values.toList()
+      ..sort((a, b) {
+        final aTime = a.sentAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bTime = b.sentAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
+  }
+
+  bool _preferNotification(
+    AppNotification candidate,
+    AppNotification existing,
+  ) {
+    if (candidate.channel.toUpperCase() == 'IN_APP' &&
+        existing.channel.toUpperCase() != 'IN_APP') {
+      return true;
+    }
+    if (!candidate.isRead && existing.isRead) {
+      return true;
+    }
+    return false;
   }
 }
