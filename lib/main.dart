@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -7,6 +9,8 @@ import 'providers/exercise_provider.dart';
 import 'providers/scoliometer_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/notification_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'widgets/firebase_options.dart';
 import 'providers/report_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/reward_provider.dart';
@@ -51,6 +55,10 @@ import 'screens/account_deletion_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  NotificationService.registerBackgroundHandler();
   runApp(const ScolioCareApp());
 }
 
@@ -101,12 +109,17 @@ class ScolioCareApp extends StatelessWidget {
             notificationService,
             getUserId: () => context.read<AuthProvider>().currentUser?.userId,
           ),
-          update: (context, auth, previous) =>
-              previous ??
-              NotificationProvider(
-                notificationService,
-                getUserId: () => auth.currentUser?.userId,
-              ),
+          update: (context, auth, previous) {
+            final provider = previous ??
+                NotificationProvider(
+                  notificationService,
+                  getUserId: () => auth.currentUser?.userId,
+                );
+            if (auth.currentUser?.userId != null) {
+              unawaited(provider.initializePushNotifications());
+            }
+            return provider;
+          },
         ),
 
         ChangeNotifierProvider(

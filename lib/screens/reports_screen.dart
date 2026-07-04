@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/report_provider.dart';
@@ -170,7 +171,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             color: AppTheme.info.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.medical_services,
+                          child: const Icon(Icons.medical_services,
                               color: AppTheme.info),
                         ),
                         const SizedBox(width: 16),
@@ -206,8 +207,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     FilledButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Report sent to doctor!'),
+                          const SnackBar(
+                            content: Text('Report sent to doctor!'),
                             backgroundColor: AppTheme.success,
                           ),
                         );
@@ -236,7 +237,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.warning_amber,
+                    const Icon(Icons.warning_amber,
                         color: AppTheme.warning, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
@@ -286,7 +287,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     if (analysisId != null) {
       final report = await provider.generateReport(analysisId);
-      if (!context.mounted || report == null) {
+      if (!context.mounted) return;
+      if (report == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(provider.error ?? 'Failed to generate report')),
@@ -384,10 +386,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
               FilledButton.icon(
                 onPressed: () async {
                   Navigator.pop(context);
-                  await _shareReport(path);
+                  await _openReport(context, path);
                 },
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('Open or Share PDF'),
+                label: const Text('Open PDF'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _shareReport(path);
+                },
+                icon: const Icon(Icons.share),
+                label: const Text('Share PDF'),
               ),
               const SizedBox(height: 8),
               TextButton(
@@ -399,6 +410,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openReport(BuildContext context, String path) async {
+    final result = await OpenFilex.open(
+      path,
+      type: 'application/pdf',
+    );
+
+    if (!context.mounted) return;
+    if (result.type != ResultType.done) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.message.isNotEmpty
+                ? result.message
+                : 'No PDF viewer found. Try sharing the report instead.',
+          ),
+          backgroundColor: AppTheme.destructive,
+        ),
+      );
+    }
   }
 
   Future<void> _shareReport(String path) async {

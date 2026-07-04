@@ -9,6 +9,7 @@ class RewardProvider extends ChangeNotifier {
   List<UserReward> _userRewards = [];
   bool _isLoading = false;
   String? _error;
+  int _totalPoints = 0;
 
   RewardProvider(this._rewardService);
 
@@ -17,8 +18,7 @@ class RewardProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  int get totalPoints =>
-      _userRewards.fold(0, (sum, ur) => sum + ur.reward.points);
+  int get totalPoints => _totalPoints;
 
   int get totalRewardsEarned => _userRewards.length;
 
@@ -46,6 +46,7 @@ class RewardProvider extends ChangeNotifier {
       notifyListeners();
 
       _userRewards = await _rewardService.getUserRewards(userId);
+      _totalPoints = await _rewardService.getUserBalance(userId);
 
       _isLoading = false;
       notifyListeners();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import '../../lib/widgets/firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/profile_provider.dart';
@@ -16,7 +16,7 @@ import 'providers/legal_provider.dart';
 import 'providers/posture_provider.dart';
 import 'core/api/api_client.dart';
 import 'core/services/chat_service.dart';
-import 'core/services/notification_service.dart';
+import '../../lib/core/services/notification_service.dart';
 import 'core/services/report_service.dart';
 import 'core/services/reward_service.dart';
 import 'core/services/legal_service.dart';

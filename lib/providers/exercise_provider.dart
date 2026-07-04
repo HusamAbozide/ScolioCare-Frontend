@@ -334,7 +334,6 @@ class ExerciseProvider extends ChangeNotifier {
     final exercises = allPlanExercises;
     if (plan == null || exercises.isEmpty) return [];
 
-    final scheduledWeekdays = {DateTime.monday, DateTime.wednesday, DateTime.friday};
     final days = <ExerciseDay>[];
     for (int offset = 0; offset < 28; offset++) {
       final date = DateTime(
@@ -342,7 +341,6 @@ class ExerciseProvider extends ChangeNotifier {
         plan.startDate.month,
         plan.startDate.day + offset,
       );
-      if (!scheduledWeekdays.contains(date.weekday)) continue;
       days.add(
         ExerciseDay(
           week: (offset ~/ 7) + 1,

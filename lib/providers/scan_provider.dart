@@ -91,12 +91,12 @@ class ScanProvider extends ChangeNotifier {
       } else if (analysis.status == 'COMPLETED') {
         _addCompletedAnalysisToHistory(analysis);
       } else if (analysis.status == 'FAILED') {
-        _errorMessage = analysis.errorMessage ?? 'Analysis failed';
+        _errorMessage = _friendlyAnalysisError(analysis.errorMessage);
       }
     } on ApiException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = _friendlyAnalysisError(e.message);
     } catch (e) {
-      _errorMessage = 'Failed to start analysis: $e';
+      _errorMessage = _friendlyAnalysisError('Failed to start analysis: $e');
     } finally {
       _isAnalyzing = false;
       notifyListeners();
@@ -119,7 +119,7 @@ class ScanProvider extends ChangeNotifier {
           _addCompletedAnalysisToHistory(analysis);
           break;
         } else if (analysis.status == 'FAILED') {
-          _errorMessage = analysis.errorMessage ?? 'Analysis failed';
+          _errorMessage = _friendlyAnalysisError(analysis.errorMessage);
           break;
         }
       } catch (e) {
@@ -232,5 +232,33 @@ class ScanProvider extends ChangeNotifier {
     if (abs <= 7) return 'Borderline';
     if (abs <= 10) return 'Mild';
     return 'Significant';
+  }
+
+  String _friendlyAnalysisError(String? message) {
+    final raw = message ?? '';
+    final normalized = raw.toLowerCase();
+
+    if (normalized.contains('invalid image') ||
+        normalized.contains('not the required human spine x-ray') ||
+        normalized.contains('not a spine x-ray')) {
+      return 'This image cannot be analyzed. Please upload a clear spine X-ray image.';
+    }
+
+    if (normalized.contains('file is too large') ||
+        normalized.contains('dimensions are too large')) {
+      return 'This image is too large. Please upload a smaller spine X-ray image.';
+    }
+
+    if (normalized.contains('not a readable image') ||
+        normalized.contains('could not be read') ||
+        normalized.contains('decoded')) {
+      return 'This file could not be read. Please choose another image.';
+    }
+
+    if (raw.length > 140) {
+      return 'The image could not be analyzed. Please upload a clear spine X-ray image.';
+    }
+
+    return raw.isNotEmpty ? raw : 'Analysis failed. Please try again.';
   }
 }
