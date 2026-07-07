@@ -2,10 +2,8 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
 class ApiConfig {
-  // DEVELOPMENT MODE - Set to true to use mock data without backend
   static const bool useMockMode = false;
 
-  // Base URL - override with --dart-define=API_BASE_URL=...
   static const String _apiBaseUrlOverride =
       String.fromEnvironment('API_BASE_URL');
 
@@ -28,17 +26,14 @@ class ApiConfig {
       return 'http://localhost:8081';
     }
 
-    // For Android physical device, use your PC's network IP
     if (defaultTargetPlatform == TargetPlatform.android) {
-      // Changed to .247 - your actual WiFi IP
       return 'http://192.168.110.247:8081';
     }
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return 'http://localhost:8081'; // iOS simulator
+      return 'http://localhost:8081'; 
     }
 
-    // Default for physical devices, use your computer's local network IP
     return 'http://192.168.110.247:8081';
   }
 
@@ -53,9 +48,6 @@ class ApiConfig {
 
   // Endpoints
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Authentication
-  // ══════════════════════════════════════════════════════════════════════════
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String googleAuth = '/auth/google';
@@ -67,9 +59,7 @@ class ApiConfig {
   static const String sendOtp = '/auth/otp/send';
   static const String verifyOtp = '/auth/otp/verify';
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Profile & Assessment
-  // ══════════════════════════════════════════════════════════════════════════
+
   static const String profile = '/profile';
   static const String profileUpdate = '/profile/update';
   static const String profileVitals = '/profile/vitals';
@@ -78,14 +68,10 @@ class ApiConfig {
   static const String assessmentSubmit = '/assessment/submit';
   static const String settingsUpdate = '/settings/update';
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // User Management
-  // ══════════════════════════════════════════════════════════════════════════
+
   static const String userDelete = '/user/delete';
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Consent & Legal
-  // ══════════════════════════════════════════════════════════════════════════
+ 
   static const String consentAccept = '/consent/accept';
   static const String consentWithdraw = '/consent/withdraw';
   static const String consentMy = '/consent/my';
@@ -93,16 +79,10 @@ class ApiConfig {
   static const String legalDisclaimer = '/legal/disclaimer';
   static const String legalTerms = '/legal/terms';
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Rewards
-  // ══════════════════════════════════════════════════════════════════════════
   static const String rewardsCatalog = '/rewards/catalog';
   static const String userRewards = '/rewards'; // + /{userId}
   static String userRewardBalance(String userId) => '/rewards/$userId/balance';
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Exercise Module
-  // ══════════════════════════════════════════════════════════════════════════
   static const String exercises =
       '/exercises'; // GET all, supports ?category=X&difficulty=Y
   static String exerciseById(String id) => '/exercises/$id'; // GET by ID
@@ -128,10 +108,7 @@ class ApiConfig {
   static const String exerciseLogToday = '/log/today'; // DELETE
   static String exerciseLogByUserId(String userId) => '/log/$userId'; // GET
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Tracking Module
-  // ══════════════════════════════════════════════════════════════════════════
-
+ 
   // Progress Tracking
   static String progressByUserId(String userId) => '/progress/$userId'; // GET
   static String progressSummary(String userId) =>
@@ -157,9 +134,7 @@ class ApiConfig {
   static String postureDeleteComparison(String comparisonId) =>
       '/posture/comparisons/$comparisonId'; // DELETE
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Imaging Module (NOTE: Uses /api/v1 prefix!)
-  // ══════════════════════════════════════════════════════════════════════════
+  
   static const String imagingCapture = '/api/v1/imaging/capture'; // POST
   static const String imagingUpload = '/api/v1/imaging/upload'; // POST
   static const String imagingValidate = '/api/v1/imaging/validate'; // POST
@@ -171,9 +146,6 @@ class ApiConfig {
   static String imagingServe(String imageId) =>
       '/api/v1/imaging/files/images/$imageId'; // GET
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Analysis Module (NOTE: Uses /api/v1 prefix!)
-  // ══════════════════════════════════════════════════════════════════════════
   static const String analysisRun = '/api/v1/analysis/run'; // POST
   static String analysisById(String analysisId) =>
       '/api/v1/analysis/$analysisId'; // GET
@@ -182,9 +154,6 @@ class ApiConfig {
   static String analysisStatus(String analysisId) =>
       '/api/v1/analysis/$analysisId/status'; // GET
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Report Module (NOTE: Uses /api/v1 prefix!)
-  // ══════════════════════════════════════════════════════════════════════════
   static const String reportGenerate = '/api/v1/report/generate'; // POST
   static String reportById(String reportId) =>
       '/api/v1/report/$reportId'; // GET
@@ -198,9 +167,6 @@ class ApiConfig {
   static String reportStatus(String reportId) =>
       '/api/v1/report/$reportId/status'; // GET
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Chat Module
-  // ══════════════════════════════════════════════════════════════════════════
   static const String chatSessionStart = '/chat/session/start'; // POST
   static String chatSessionMessage(String sessionId) =>
       '/chat/session/$sessionId/message'; // POST
@@ -209,9 +175,6 @@ class ApiConfig {
   static String chatSessionEnd(String sessionId) =>
       '/chat/session/$sessionId/end'; // POST
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Notification Module
-  // ══════════════════════════════════════════════════════════════════════════
   static String notificationsByUserId(String userId) =>
       '/notification/$userId'; // GET
   static const String notificationUnreadCount =
@@ -222,6 +185,7 @@ class ApiConfig {
       '/notification/cancel'; // POST (needs ?userId=X)
   static const String notificationDeviceToken =
       '/notification/device-token'; // POST (needs ?userId=X)
+  static const String notificationTestPush = '/notification/test-push'; // POST
   static const String notificationSettingsUpdate =
       '/notification/settings/update'; // PUT
 }

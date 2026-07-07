@@ -5,21 +5,12 @@ import 'package:sensors_plus/sensors_plus.dart';
 import '../core/api/api_client.dart';
 import '../core/services/tracking_service.dart';
 
-// ---------------------------------------------------------------------------
-// Orientation guard — alerts when the device is tilted out of the valid
-// measurement plane (pitch too far from 0°).
-// ---------------------------------------------------------------------------
+
 enum OrientationStatus { ok, pitchWarning, flatWarning }
 
-// ---------------------------------------------------------------------------
-// Confidence tier derived from how stable the signal was before capture.
-// ---------------------------------------------------------------------------
 enum MeasurementConfidence { high, medium, low }
 
-// ---------------------------------------------------------------------------
-// Structured exam session: captures both left and right ATR at one spinal
-// level so the bilateral difference can be computed.
-// ---------------------------------------------------------------------------
+
 class BilateralReading {
   final double? leftAngle;
   final double? rightAngle;
@@ -31,7 +22,6 @@ class BilateralReading {
     required this.confidence,
   });
 
-  /// ATR is the absolute side-to-side difference in trunk rotation.
   double? get atr {
     if (leftAngle == null || rightAngle == null) return null;
     return (leftAngle! - rightAngle!).abs();
@@ -40,9 +30,7 @@ class BilateralReading {
   bool get isComplete => leftAngle != null && rightAngle != null;
 }
 
-// ---------------------------------------------------------------------------
-// Full exam session: thoracic → thoracolumbar → lumbar in sequence.
-// ---------------------------------------------------------------------------
+
 class ExamSession {
   final DateTime startedAt;
   final Map<String, BilateralReading> readings = {};
@@ -58,9 +46,6 @@ class ExamSession {
       readings['lumbar']!.isComplete;
 }
 
-// ---------------------------------------------------------------------------
-// Main provider
-// ---------------------------------------------------------------------------
 class ScoliometerProvider extends ChangeNotifier {
   final TrackingService _trackingService = TrackingService(ApiClient());
 
@@ -68,9 +53,7 @@ class ScoliometerProvider extends ChangeNotifier {
   bool _isMeasuring = false;
   bool _calibrated = false;
 
-  // Calibration is now stored as a full flat-surface baseline vector instead
-  // of a simple scalar offset, so any device tilt at calibration time is
-  // removed from subsequent readings.
+  
   double _calibrationOffset = 0;
   double _calibrationPitch = 0; // pitch correction captured at calibration
 
@@ -80,8 +63,8 @@ class ScoliometerProvider extends ChangeNotifier {
   String? _captureNotice;
   String? _saveError;
   OrientationStatus _orientationStatus = OrientationStatus.ok;
-  double _pitchAngle = 0; // live pitch for the orientation guard
-  double _signalVariance = 0; // rolling variance used for confidence score
+  double _pitchAngle = 0; 
+  double _signalVariance = 0; 
   double _stabilityProgress = 0.0;
 
   final List<double> _angleHistory = [];
@@ -93,7 +76,6 @@ class ScoliometerProvider extends ChangeNotifier {
 
   ExamSession? _currentSession;
 
-  // ── Noise-filtering constants ────────────────────────────────────────────
   static const int _smoothingWindow = 8;
   static const int _varianceWindowSize = 20;
   static const double _jitterDeadZone = 0.20;
@@ -104,15 +86,10 @@ class ScoliometerProvider extends ChangeNotifier {
   static const double _minAutoCaptureAngle = 0.0;
   static const Duration _requiredStableDuration = Duration(milliseconds: 1000);
 
-  // ── Orientation guard thresholds ─────────────────────────────────────────
-  // Pitch (forward/back tilt of the device) must stay within ±12° of the
-  // calibrated baseline; beyond that the roll reading is unreliable.
   static const double _maxAllowedPitchDeviation = 12.0;
-  // If the device is nearly flat (gravity mostly on Z) the atan2 is unstable.
+
   static const double _minTiltFromFlat = 15.0;
 
-  // ── Angle clamp per region ───────────────────────────────────────────────
-  // Lumbar curves can exceed 15° in severe cases; other regions use ±15°.
   static const Map<String, double> _angleClampByRegion = {
     'thoracic': 15.0,
     'thoracolumbar': 18.0,
@@ -122,7 +99,6 @@ class ScoliometerProvider extends ChangeNotifier {
 
   StreamSubscription<AccelerometerEvent>? _sensorSubscription;
 
-  // ── Public getters ────────────────────────────────────────────────────────
   double get currentAngle => _currentAngle;
   bool get isMeasuring => _isMeasuring;
   bool get calibrated => _calibrated;
@@ -139,14 +115,12 @@ class ScoliometerProvider extends ChangeNotifier {
   List<MeasurementRecord> get savedMeasurements =>
       List.unmodifiable(_savedMeasurements);
 
-  /// Confidence derived from rolling signal variance captured just before save.
   MeasurementConfidence get currentConfidence {
     if (_signalVariance < 0.10) return MeasurementConfidence.high;
     if (_signalVariance < 0.40) return MeasurementConfidence.medium;
     return MeasurementConfidence.low;
   }
 
-  /// ±uncertainty range shown to the user (e.g. "3.2° ± 0.4°").
   double get uncertaintyRange {
     switch (currentConfidence) {
       case MeasurementConfidence.high:
@@ -176,7 +150,6 @@ class ScoliometerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Session management ────────────────────────────────────────────────────
 
   void startExamSession() {
     _currentSession = ExamSession();
@@ -188,7 +161,6 @@ class ScoliometerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Signal processing ─────────────────────────────────────────────────────
 
   double _smoothAngle(double newAngle) {
     _angleHistory.add(newAngle);
@@ -215,7 +187,6 @@ class ScoliometerProvider extends ChangeNotifier {
     return _currentAngle + limitedDelta;
   }
 
-  /// Tracks rolling variance so we can compute a confidence score.
   void _updateVariance(double angle) {
     _varianceWindow.add(angle);
     if (_varianceWindow.length > _varianceWindowSize) {
@@ -231,16 +202,12 @@ class ScoliometerProvider extends ChangeNotifier {
     _signalVariance = variance;
   }
 
-  /// Checks pitch deviation from the calibrated baseline.
-  /// Returns true when the orientation is acceptable for measurement.
   bool _updateOrientationGuard(double x, double y, double z) {
-    // Pitch: rotation around the X axis (forward/back tilt).
+
     _pitchAngle = atan2(x, sqrt(y * y + z * z)) * 180 / pi;
 
-    // Correct for whatever pitch was present at calibration time.
     final correctedPitch = _pitchAngle - _calibrationPitch;
 
-    // Device nearly flat — atan2(y,z) becomes unreliable.
     final tiltFromFlat = atan2(sqrt(x * x + y * y), z.abs()) * 180 / pi;
     if (tiltFromFlat < _minTiltFromFlat) {
       _orientationStatus = OrientationStatus.flatWarning;
@@ -300,7 +267,6 @@ class ScoliometerProvider extends ChangeNotifier {
     return false;
   }
 
-  // ── Measuring lifecycle ───────────────────────────────────────────────────
 
   void startMeasuring() {
     _sensorError = null;
@@ -318,8 +284,6 @@ class ScoliometerProvider extends ChangeNotifier {
         (AccelerometerEvent event) {
           _updateOrientationGuard(event.x, event.y, event.z);
 
-          // Still update the live reading so the user can see the number, but
-          // mark orientation warnings so the UI can show the alert.
           final rawAngle = atan2(event.y, event.z) * 180 / pi;
           final adjusted = rawAngle - _calibrationOffset;
           final smoothed = _smoothAngle(adjusted);
@@ -330,9 +294,6 @@ class ScoliometerProvider extends ChangeNotifier {
 
           _updateVariance(_currentAngle);
 
-          // Auto-capture is based on signal stability. Orientation warnings are
-          // still shown to guide placement, but they should not prevent saving
-          // when the phone is held still enough for a usable ATR snapshot.
           _checkAndAutoCapture(_currentAngle);
 
           notifyListeners();
@@ -362,10 +323,6 @@ class ScoliometerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Calibrates using a stable baseline: captures both the roll offset AND
-  /// the pitch angle so the orientation guard uses the correct reference.
-  /// Call this while the device is resting on a known-flat surface or held
-  /// against the patient's spine at the neutral starting position.
   void calibrate() {
     _calibrationOffset += _currentAngle;
     _calibrationPitch = _pitchAngle; // lock in current pitch as the baseline
@@ -376,7 +333,6 @@ class ScoliometerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Saving ────────────────────────────────────────────────────────────────
 
   void _saveCurrentReading({bool auto = false}) {
     final record = MeasurementRecord(
@@ -392,7 +348,6 @@ class ScoliometerProvider extends ChangeNotifier {
     _savedMeasurements.insert(0, record);
     unawaited(_persistReading(record));
 
-    // If an exam session is active, slot the reading into the bilateral map.
     if (_currentSession != null) {
       final existing = _currentSession!.readings[_selectedRegion] ??
           BilateralReading(confidence: currentConfidence);
@@ -431,7 +386,6 @@ class ScoliometerProvider extends ChangeNotifier {
     }
   }
 
-  // ── Classification ───────────────────────────────────────────────────────
 
   ATRClassification getClassification(double angle) {
     final absAngle = angle.abs();
@@ -457,9 +411,7 @@ class ScoliometerProvider extends ChangeNotifier {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Data models
-// ---------------------------------------------------------------------------
+
 
 class MeasurementRecord {
   final String region;

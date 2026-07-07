@@ -8,6 +8,7 @@ class NotificationProvider extends ChangeNotifier {
 
   List<AppNotification> _notifications = [];
   bool _isLoading = false;
+  bool _isSendingTestPush = false;
   String? _error;
   int _unreadCount = 0;
   String? _initializedUserId;
@@ -18,8 +19,25 @@ class NotificationProvider extends ChangeNotifier {
 
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
   bool get isLoading => _isLoading;
+  bool get isSendingTestPush => _isSendingTestPush;
   String? get error => _error;
   int get unreadCount => _unreadCount;
+
+  void handleAuthUserChanged(String? userId) {
+    if (userId == _initializedUserId) {
+      return;
+    }
+
+    _initializedUserId = null;
+    _notifications = [];
+    _unreadCount = 0;
+    _error = null;
+
+    if (userId == null) {
+      _notificationService.clearActiveUser();
+      notifyListeners();
+    }
+  }
 
   Future<void> initializePushNotifications() async {
     final userId = _getUserId();
@@ -195,6 +213,25 @@ class NotificationProvider extends ChangeNotifier {
       );
     } catch (e) {
       // Silently fail for device token registration
+    }
+  }
+
+  Future<bool> sendTestPush({int delaySeconds = 7}) async {
+    try {
+      _isSendingTestPush = true;
+      _error = null;
+      notifyListeners();
+
+      await _notificationService.sendTestPush(delaySeconds: delaySeconds);
+      await loadNotifications();
+      return true;
+    } catch (e) {
+      _error = 'Failed to send test push: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      _isSendingTestPush = false;
+      notifyListeners();
     }
   }
 

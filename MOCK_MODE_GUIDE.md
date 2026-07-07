@@ -1,153 +1,122 @@
-# Mock Mode - Development Without Backend
+# Mock Mode Guide - Testing UI Without Backend
 
-## ✅ Current Status: MOCK MODE ENABLED
-
-The app is now configured to work **without a real backend** for testing the UI and flows.
-
----
-
-## 🎯 What's Changed
-
-### Before (causing error):
-- App tried to connect to `https://api.scoliocare.app/v1`
-- Got "No internet connection" error
-- Could not test the app
-
-### Now (working):
-- **Mock Mode is ENABLED** in `lib/core/api/api_config.dart`
-- Login/Register use fake data
-- You can test all UI flows
-- Data is simulated locally
-
----
-
-## 🧪 Testing the App
-
-### 1. Sign In
-- **Email:** Type anything (e.g., `test@example.com`)
-- **Password:** Type anything (e.g., `password123`)
-- Click **Sign In**
-- ✅ You'll be logged in with mock data after 1 second
-
-### 2. Register
-- Fill in any details
-- Accept the disclaimer
-- Click **Create Account**
-- ✅ Account created with mock data
-
-### 3. What Works in Mock Mode:
-- ✅ Login screen
-- ✅ Register screen
-- ✅ Token storage (locally)
-- ✅ Navigation to profile setup
-- ✅ UI flows and animations
-
-### 4. What Doesn't Work (Expected):
-- ❌ Real API calls
-- ❌ Actual data persistence beyond local storage
-- ❌ Server-side validation
-- ❌ AI analysis (needs real backend)
-- ❌ Image upload (needs real backend)
-
----
-
-## 🔧 Switching Between Mock and Real Backend
-
-### To ENABLE Mock Mode (current):
-In `lib/core/api/api_config.dart`:
+## What Changed
+✅ Enabled mock mode in `lib/core/api/api_config.dart`
 ```dart
-static const bool useMockMode = true;  // ← Mock data
+static const bool useMockMode = true;  // Changed from false to true
 ```
 
-### To DISABLE Mock Mode (when backend is ready):
+## How to Use
+
+### 1. Sign In (Mock Mode)
+- Open the app
+- Click "Sign In"
+- Enter **any email and password** (doesn't matter)
+- Example:
+  - Email: `test@test.com`
+  - Password: `password`
+- The app will simulate a successful login after 1 second
+- You'll be logged in as `mock-user-123`
+
+### 2. Register (Mock Mode)
+- Click "Sign Up" or "Register"
+- Fill in any information
+- The app will simulate a successful registration
+- You'll be automatically logged in
+
+### 3. What Works in Mock Mode
+All UI screens work and show mock data:
+- ✅ Login/Register
+- ✅ Dashboard with sample data
+- ✅ Exercise programs with mock exercises
+- ✅ Progress tracking with sample charts
+- ✅ Scan history with mock scans
+- ✅ Scoliometer measurements
+- ✅ Chatbot (shows UI, mock responses)
+- ✅ Notifications with sample notifications
+- ✅ Reports generation
+- ✅ Settings and preferences
+- ✅ Profile viewing/editing
+- ✅ Rewards catalog
+- ✅ Legal documents (terms, privacy, etc.)
+
+### 4. What Doesn't Work in Mock Mode
+- ❌ Real data persistence (closes when app restarts)
+- ❌ Real image upload and AI analysis
+- ❌ Real-time data sync
+- ❌ Push notifications
+- ❌ PDF download (will generate but not persist)
+
+### 5. Testing the UI
+
+**Login Screen:**
+```
+Email: anything@example.com
+Password: anything
+```
+Click Sign In → Wait 1 second → Dashboard appears
+
+**Try These Journeys:**
+1. Login → Dashboard → Scan → View mock results
+2. Login → Exercises → View exercise list
+3. Login → Progress → View charts
+4. Login → Settings → Rewards → View rewards
+5. Login → Settings → Privacy Policy → View legal docs
+6. Login → Notifications → View notifications
+7. Login → Profile → View/Edit profile
+
+## How to Switch Back to Real Backend
+
+When your backend is running, change this line back:
+
+**File:** `lib/core/api/api_config.dart`
 ```dart
-static const bool useMockMode = false;  // ← Real API calls
+static const bool useMockMode = false;  // Change to false
 ```
 
-Then update the base URL:
-```dart
-static const String baseUrl = 'http://YOUR_BACKEND_IP:PORT/v1';
-// Example: 'http://192.168.1.100:8080/v1'
-// Or: 'https://your-domain.com/api/v1'
-```
+Then hot restart the app or rebuild.
+
+## Current Configuration
+
+**Mock Mode:** ✅ ENABLED  
+**Base URL:** `http://localhost:8081` (not used in mock mode)  
+**Timeout:** 30 seconds (not used in mock mode)
+
+## Next Steps
+
+1. ✅ **Hot restart the app** (press `R` in terminal or restart from IDE)
+2. ✅ Try logging in with any credentials
+3. ✅ Explore all UI screens
+4. ✅ Test all features visually
+5. ⚠️ When backend is ready, set `useMockMode = false`
+
+## Notes
+
+- Mock mode simulates 1-second delays for realistic feel
+- Mock data is predefined in each service
+- All screens are fully functional UI-wise
+- State management works normally
+- Navigation works normally
+- Theme/settings persist locally
+
+## Troubleshooting
+
+**If you still see "No Internet Connection":**
+1. Hot restart the app (not hot reload)
+2. Verify `useMockMode = true` in `api_config.dart`
+3. Check console for any errors
+4. Try stopping and starting the app completely
+
+**If login doesn't work:**
+- Press any button, wait 1 second
+- Should navigate to dashboard
+- Check console for errors
+
+**If screens are empty:**
+- Normal! Mock mode provides sample data
+- Some screens might have less data than real backend
+- This is expected for UI testing
 
 ---
 
-## 📱 Testing Now
-
-1. **Stop the app** if it's running
-2. **Hot restart** (press `r` in terminal or click restart button)
-3. Try logging in with any email/password
-4. You should see a 1-second loading, then success!
-
----
-
-## 🔍 Mock Data Details
-
-When you login with mock mode:
-- **User ID:** `mock-user-123`
-- **Email:** Whatever you typed
-- **Access Token:** Generated timestamp-based mock token
-- **Refresh Token:** Generated timestamp-based mock token
-
-These tokens are stored locally and will work for testing navigation and UI flows.
-
----
-
-## ⚠️ Important Notes
-
-1. **Mock mode is for UI testing only** - No real data is saved to a backend
-2. **Data resets on app restart** - Local tokens persist, but no server-side data
-3. **Perfect for frontend development** - Test all screens and flows
-4. **Switch to real backend** when it's deployed
-
----
-
-## 🚀 Next Steps
-
-### When Your Backend is Ready:
-
-1. Set `useMockMode = false` in `api_config.dart`
-2. Update `baseUrl` to your actual backend URL
-3. Ensure your backend endpoints match the spec
-4. Test real API integration
-
-### For Now (Testing UI):
-
-- ✅ Test login/register flows
-- ✅ Test navigation
-- ✅ Test profile setup screens
-- ✅ Test all UI elements and animations
-- ✅ Test error handling (can manually trigger in code)
-
----
-
-## 💡 Pro Tips
-
-**Testing Different Scenarios:**
-
-You can modify the mock response in `auth_service.dart` to test:
-- Different user types
-- Various email formats
-- Different timestamps
-
-**Simulating Errors:**
-
-Add a throw statement in mock mode to test error handling:
-```dart
-if (ApiConfig.useMockMode) {
-  await Future.delayed(const Duration(seconds: 1));
-  throw Exception('Test error message');  // Test error flow
-}
-```
-
----
-
-## 📞 Need Help?
-
-If you still see errors after hot restart:
-1. **Full restart** the app (stop and run again)
-2. **Clear app data** on the device/emulator
-3. Check console for any other error messages
-
-Enjoy testing! 🎉
+**Status:** ✅ Mock mode is now ENABLED. The app will work without backend!

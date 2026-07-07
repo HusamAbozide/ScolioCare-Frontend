@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import '../api/api_client.dart';
 import '../api/api_config.dart';
@@ -13,7 +14,6 @@ class AuthService {
   AuthService(this._apiClient);
 
   Future<AuthResponse> login(String email, String password) async {
-    // Mock mode for development without backend
     if (ApiConfig.useMockMode) {
       await Future.delayed(
           const Duration(seconds: 1)); // Simulate network delay
@@ -56,11 +56,8 @@ class AuthService {
     );
 
     if (response.success && response.data != null) {
-      // Check if this is an email verification required response
       if (response.data!.containsKey('message') &&
           response.data!.containsKey('email')) {
-        // Registration successful, but email verification needed
-        // Return a temporary auth response without tokens
         final user = User(
           userId: 'pending-verification',
           email: cleanRequest.email,
@@ -78,7 +75,6 @@ class AuthService {
         );
       }
 
-      // If tokens are provided (shouldn't happen for register, but handle it)
       return await _handleTokenResponse(
         response.data!,
         fallbackEmail: cleanRequest.email,
@@ -279,14 +275,13 @@ class AuthService {
     final cleanEmail = email.trim().toLowerCase();
     final cleanOtp = otp.trim();
 
-    print(
+    developer.log(
         'Verifying OTP - Email: "$cleanEmail", OTP: "$cleanOtp" (length: ${cleanOtp.length})');
 
-    // Explicitly wrap OTP as string to prevent JSON encoder from converting to number
-    final requestBody = jsonEncode({
+    final requestBody = {
       'email': cleanEmail,
       'otp': cleanOtp.toString(), // Force string type
-    });
+    };
 
     final response = await _apiClient.post<Map<String, dynamic>>(
       ApiConfig.verifyOtp,
@@ -295,7 +290,6 @@ class AuthService {
     );
 
     if (response.success && response.data != null) {
-      // Check if tokens are included in the response
       if (response.data!.containsKey('accessToken')) {
         final accessToken = response.data!['accessToken'] as String;
         final refreshToken = response.data!['refreshToken'] as String;
@@ -325,7 +319,7 @@ class AuthService {
     return null;
   }
 
-  // Mock data generator for development
+  // Mock data generator 
   AuthResponse _createMockAuthResponse(String email) {
     final mockUser = User(
       userId: 'mock-user-123',

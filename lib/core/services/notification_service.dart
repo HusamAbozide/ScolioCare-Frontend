@@ -29,6 +29,7 @@ class NotificationService {
     playSound: true,
   );
   bool _initialized = false;
+  String? _activeUserId;
 
   NotificationService(this._apiClient);
 
@@ -37,6 +38,7 @@ class NotificationService {
   }
 
   Future<void> initialize({String? userId}) async {
+    _activeUserId = userId;
     if (_initialized) {
       if (userId != null) {
         await syncDeviceToken(userId);
@@ -98,9 +100,10 @@ class NotificationService {
     });
 
     FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
-      if (userId != null) {
+      final currentUserId = _activeUserId;
+      if (currentUserId != null) {
         await registerDeviceToken(
-          userId: userId,
+          userId: currentUserId,
           deviceToken: token,
           platform: defaultTargetPlatform == TargetPlatform.iOS
               ? 'ios'
@@ -113,6 +116,10 @@ class NotificationService {
     if (userId != null) {
       await syncDeviceToken(userId);
     }
+  }
+
+  void clearActiveUser() {
+    _activeUserId = null;
   }
 
   Future<void> syncDeviceToken(String userId) async {
@@ -277,6 +284,21 @@ class NotificationService {
       throw Exception(response.message ?? 'Failed to register device token');
     }
     debugPrint('Backend accepted FCM device token.');
+  }
+
+  Future<void> sendTestPush({int delaySeconds = 7}) async {
+    if (ApiConfig.useMockMode) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      return;
+    }
+
+    final response = await _apiClient.post(
+      ApiConfig.notificationTestPush,
+      queryParameters: {'delaySeconds': delaySeconds},
+    );
+    if (!response.success) {
+      throw Exception(response.message ?? 'Failed to send test push');
+    }
   }
 
   // Mock data generator

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../core/api/api_client.dart';
 import '../core/services/auth_service.dart';
 import '../core/services/profile_service.dart';
@@ -145,27 +146,24 @@ class AuthProvider extends ChangeNotifier {
           response.containsKey('userId')) {
         // User is now logged in with tokens
         final userId = response['userId'] as String;
-        _currentUser = await _loadCurrentUser(
-              fallbackUser: User(
-                userId: userId,
-                email: email,
-                isActive: true,
-                emailVerified: true,
-                phoneVerified: false,
-                createdAt: DateTime.now(),
-                lastLogin: DateTime.now(),
-              ),
-            ) ??
-            User(
-              userId: userId,
-              email: email,
-              isActive: true,
-              emailVerified: true,
-              phoneVerified: false,
-              createdAt: DateTime.now(),
-              lastLogin: DateTime.now(),
-            );
+        final fallbackUser = User(
+          userId: userId,
+          email: email,
+          isActive: true,
+          emailVerified: true,
+          phoneVerified: false,
+          createdAt: DateTime.now(),
+          lastLogin: DateTime.now(),
+        );
+        _currentUser = fallbackUser;
         _isLoggedIn = true;
+
+        unawaited(_loadCurrentUser(fallbackUser: fallbackUser).then((user) {
+          if (user != null) {
+            _currentUser = user;
+            notifyListeners();
+          }
+        }));
       }
 
       return true;

@@ -148,10 +148,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         // The backend should return tokens after successful OTP verification
         // Check if user is now logged in
         if (authProvider.isLoggedIn) {
-          await context
+          unawaited(context
               .read<NotificationProvider>()
-              .initializePushNotifications();
-          if (!mounted) return;
+              .initializePushNotifications());
           context.read<ProfileProvider>().reset();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -385,6 +384,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         : const Text(
                             'Verify OTP',
                             style: TextStyle(
+                              color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
