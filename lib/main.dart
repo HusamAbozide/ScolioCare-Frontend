@@ -78,12 +78,10 @@ class ScolioCareApp extends StatelessWidget {
 
     return MultiProvider(
       providers: [
-        // Auth provider - must be first as others depend on it
         ChangeNotifierProvider(
           create: (_) => AuthProvider()..loadSession(),
         ),
 
-        // Providers that create their own service instances
         ChangeNotifierProvider(
           create: (_) => ProfileProvider(),
         ),
@@ -115,7 +113,9 @@ class ScolioCareApp extends StatelessWidget {
                   notificationService,
                   getUserId: () => auth.currentUser?.userId,
                 );
-            if (auth.currentUser?.userId != null) {
+            final userId = auth.currentUser?.userId;
+            provider.handleAuthUserChanged(userId);
+            if (userId != null) {
               unawaited(provider.initializePushNotifications());
             }
             return provider;

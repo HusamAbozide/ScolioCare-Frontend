@@ -20,7 +20,6 @@ class ApiClient {
       contentType: Headers.jsonContentType,
     ));
 
-    // Debug logging - remove in production
     print('ApiClient initialized with baseUrl: ${ApiConfig.baseUrl}');
 
     _dio.interceptors.add(InterceptorsWrapper(
@@ -29,12 +28,10 @@ class ApiClient {
     ));
   }
 
-  // Add JWT token to requests
   Future<void> _onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Debug logging - remove in production
     print('Making ${options.method} request to: ${options.uri}');
     if (options.data != null) {
       print('Request data: ${options.data}');
@@ -53,10 +50,8 @@ class ApiClient {
     ErrorInterceptorHandler handler,
   ) async {
     if (error.response?.statusCode == 401) {
-      // Token expired - try refresh
       final refreshed = await _refreshToken();
       if (refreshed) {
-        // Retry original request
         final options = error.requestOptions;
         final token = await _secureStorage.read(key: ApiConfig.accessTokenKey);
         options.headers['Authorization'] = 'Bearer $token';
@@ -122,7 +117,6 @@ class ApiClient {
     await _secureStorage.delete(key: ApiConfig.userIdKey);
   }
 
-  // Generic GET request
   Future<ApiResponse<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -139,7 +133,6 @@ class ApiClient {
     }
   }
 
-  // Generic POST request
   Future<ApiResponse<T>> post<T>(
     String path, {
     dynamic data,
@@ -158,7 +151,6 @@ class ApiClient {
     }
   }
 
-  // Generic PUT request
   Future<ApiResponse<T>> put<T>(
     String path, {
     dynamic data,
@@ -177,8 +169,6 @@ class ApiClient {
     }
   }
 
-  // Generic DELETE request
-  // Generic DELETE request
   Future<ApiResponse<T>> delete<T>(
     String path, {
     dynamic data,
@@ -233,7 +223,6 @@ class ApiClient {
     }
   }
 
-  // Store tokens after login
   Future<void> storeTokens(
       String accessToken, String refreshToken, String userId) async {
     await _secureStorage.write(
@@ -243,17 +232,14 @@ class ApiClient {
     await _secureStorage.write(key: ApiConfig.userIdKey, value: userId);
   }
 
-  // Get stored access token
   Future<String?> getAccessToken() async {
     return await _secureStorage.read(key: ApiConfig.accessTokenKey);
   }
 
-  // Get stored user ID
   Future<String?> getUserId() async {
     return await _secureStorage.read(key: ApiConfig.userIdKey);
   }
 
-  // Clear all tokens
   Future<void> clearTokens() async {
     await _clearTokens();
   }

@@ -32,6 +32,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
+          // IconButton(
+          //   tooltip: 'Send delayed test push',
+          //   onPressed: notificationProvider.isSendingTestPush
+          //       ? null
+          //       : () => _sendTestPush(context),
+          //   icon: notificationProvider.isSendingTestPush
+          //       ? const SizedBox(
+          //           width: 20,
+          //           height: 20,
+          //           child: CircularProgressIndicator(strokeWidth: 2),
+          //         )
+          //       : const Icon(Icons.send_to_mobile),
+          // ),
           if (notificationProvider.unreadCount > 0)
             TextButton(
               onPressed: () {
@@ -66,6 +79,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: notificationProvider.isSendingTestPush
+                            ? null
+                            : () => _sendTestPush(context),
+                        icon: notificationProvider.isSendingTestPush
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.send_to_mobile),
+                        label: const Text('Send delayed test push'),
                       ),
                     ],
                   ),
@@ -102,6 +131,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ),
       floatingActionButton: const ChatFab(),
+    );
+  }
+
+  Future<void> _sendTestPush(BuildContext context) async {
+    final provider = context.read<NotificationProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await provider.sendTestPush(delaySeconds: 7);
+
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Test push scheduled. Press Home now; it arrives in about 7 seconds.'
+              : provider.error ?? 'Failed to send test push',
+        ),
+      ),
     );
   }
 }

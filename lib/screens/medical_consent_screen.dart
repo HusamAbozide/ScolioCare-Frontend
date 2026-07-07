@@ -79,7 +79,17 @@ class _MedicalConsentScreenState extends State<MedicalConsentScreen> {
       );
     } else if (Navigator.canPop(context)) {
       Navigator.pop(context);
+    } else {
+      Navigator.pushReplacementNamed(context, '/dashboard');
     }
+  }
+
+  void _goBack() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+      return;
+    }
+    Navigator.pushReplacementNamed(context, '/dashboard');
   }
 
   @override
@@ -96,23 +106,33 @@ class _MedicalConsentScreenState extends State<MedicalConsentScreen> {
     }
 
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Medical Consent'),
-        leading: widget.allowSkip || Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () {
-                  if (widget.child != null) {
-                    Navigator.pop(context);
-                  } else {
-                    _continue();
-                  }
-                },
-              )
-            : null,
-      ),
-      body: SafeArea(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (widget.child != null) {
+          _goBack();
+        } else {
+          _continue();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Medical Consent'),
+          leading: widget.allowSkip || Navigator.canPop(context)
+              ? IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () {
+                    if (widget.child != null) {
+                      _goBack();
+                    } else {
+                      _continue();
+                    }
+                  },
+                )
+              : null,
+        ),
+        body: SafeArea(
         child: Column(
           children: [
             Expanded(
@@ -206,6 +226,7 @@ class _MedicalConsentScreenState extends State<MedicalConsentScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
